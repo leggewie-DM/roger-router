@@ -1,0 +1,37 @@
+# Fix quoting errors.
+# Add basic error handling.
+--- a/share/roger-cups
++++ b/share/roger-cups
+@@ -1,20 +1,21 @@
+-#!/bin/bash
++#!/bin/sh
+ 
+-if [ $# == 0 ] ; then
+-	echo  "file roger-cups:/ \"Unknown\" \"Tabos.org Roger Router Fax Printer\""
+-	exit 0
++if [ $# -eq 0 ] ; then
++	# Device Discovery
++	echo "file roger-cups:/ \"Unknown\" \"Tabos.org Roger Router Fax Printer\""
++	exit 0 # CUPS_BACKEND_OK
+ fi
+ 
+-RNAME=$2-Fax-ID$1
+-SPOOL_DIR=/var/spool/roger/
++RNAME="$2-Fax-ID$1"
++SPOOL_DIR="/var/spool/roger"
+ 
+ if [ $# -eq 6 ]; then
+-	cp $6 $SPOOL_DIR/$RNAME.tmp
++	cp "$6" "$SPOOL_DIR/$RNAME.tmp" || exit 1 # CUPS_BACKEND_FAILED
+ else
+-	cat > $SPOOL_DIR/$RNAME.tmp
++	cat > "$SPOOL_DIR/$RNAME.tmp" || exit 1 # CUPS_BACKEND_FAILED
+ fi
+ 
+-chmod 660 $SPOOL_DIR/$RNAME.tmp
+-mv $SPOOL_DIR/$RNAME.tmp $SPOOL_DIR/$RNAME
++chmod 660 "$SPOOL_DIR/$RNAME.tmp"
++mv "$SPOOL_DIR/$RNAME.tmp" "$SPOOL_DIR/$RNAME"
+ 
+-exit 0
++exit 0 # CUPS_BACKEND_OK

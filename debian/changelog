@@ -1,0 +1,15 @@
+roger-router (1.8.9-2) unstable; urgency=low
+
+  * copyright: add copyright information for win32/printer/ghostpdf.ppd
+  * rules: don't abort compilation on deprecated declarations
+    GTK3 3.14 deprecated a number of functions which resulted in FTBFS
+    after October 10.  These issues will need to be addressed with upstream
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Wed, 15 Oct 2014 22:22:22 +0800
+
+roger-router (1.8.9-1) unstable; urgency=low
+
+  * initial release to Debian. Closes: #739845
+    Many thanks to Philipp Matthias Hahn for sharing his packaging work.
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Tue, 02 Sep 2014 17:11:39 +0800

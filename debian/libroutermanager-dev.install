@@ -1,0 +1,3 @@
+usr/lib/*/pkgconfig/routermanager.pc
+usr/include/libroutermanager
+usr/lib/*/libroutermanager.so

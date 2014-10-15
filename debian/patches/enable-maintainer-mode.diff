@@ -1,0 +1,19 @@
+Author: Rolf Leggewie
+Description: enable maintainer mode
+Forwarded: not-needed
+
+Upstream strongly dislikes maintainer mode so Deban will need to continue to carry this patch
+
+Index: roger-router-1.8.9/configure.ac
+===================================================================
+--- roger-router-1.8.9.orig/configure.ac	2014-09-01 09:37:04.621055458 +0200
++++ roger-router-1.8.9/configure.ac	2014-09-01 09:37:04.609055396 +0200
+@@ -15,6 +15,8 @@
+ 
+ AC_CONFIG_MACRO_DIR(m4)
+ 
++AM_MAINTAINER_MODE([enable])
++
+ # Check for compilers.
+ AC_PROG_CC
+ AC_PROG_CXX

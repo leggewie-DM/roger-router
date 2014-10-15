@@ -1,0 +1,7 @@
+roger-router (1.8.9-1) unstable; urgency=low
+
+  The ffgtk program has been retired in favor of Roger Router. For further
+  information please consult the upstream news entry dated August 17, 2013
+  at http://en.tabos.org/news.
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Mon, 01 Sep 2014 14:26:43 +0800

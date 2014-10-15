@@ -1,0 +1,163 @@
+diff -urN roger-router-1.8.4/libroutermanager/plugins/fritzbox/firmware-04-74.c roger-router-1.8.4-rolf/libroutermanager/plugins/fritzbox/firmware-04-74.c
+--- roger-router-1.8.4/libroutermanager/plugins/fritzbox/firmware-04-74.c	2014-02-15 23:39:03.000000000 +0100
++++ roger-router-1.8.4-rolf/libroutermanager/plugins/fritzbox/firmware-04-74.c	2014-05-01 13:03:33.805170430 +0200
+@@ -53,7 +53,9 @@
+ 	const gchar *data;
+ 	gchar *writeaccess;
+ 
++	g_debug("[%s]: start", __FUNCTION__);
+ 	if (profile->router_info->session_timer && g_timer_elapsed(profile->router_info->session_timer, NULL) < 9 * 60) {
++		g_debug("[%s]: ret. timer running", __FUNCTION__);
+ 		return TRUE;
+ 	} else {
+ 		if (!profile->router_info->session_timer) {
+@@ -65,6 +67,7 @@
+ 	}
+ 
+ 	url = g_strdup_printf("http://%s/cgi-bin/webcm", router_get_host(profile));
++	g_debug("[%s]: url: %s", __FUNCTION__, url);
+ 	msg = soup_form_request_new(SOUP_METHOD_POST, url,
+ 	                            "getpage", "../html/login_sid.xml",
+ 	                            NULL);
+@@ -77,11 +80,13 @@
+ 
+ 		g_timer_destroy(profile->router_info->session_timer);
+ 		profile->router_info->session_timer = NULL;
++		g_debug("[%s]: ret. error", __FUNCTION__);
+ 		return FALSE;
+ 	}
+ 	data = msg->response_body->data;
+ 	read = msg->response_body->length;
+ 
++	g_debug("[%s]: save data", __FUNCTION__);
+ 	log_save_data("fritzbox-04_74-login1.html", data, read);
+ 	g_assert(data != NULL);
+ 
+diff -urN roger-router-1.8.4/libroutermanager/plugins/fritzbox/firmware-common.c roger-router-1.8.4-rolf/libroutermanager/plugins/fritzbox/firmware-common.c
+--- roger-router-1.8.4/libroutermanager/plugins/fritzbox/firmware-common.c	2014-02-16 11:19:59.000000000 +0100
++++ roger-router-1.8.4-rolf/libroutermanager/plugins/fritzbox/firmware-common.c	2014-04-30 17:00:40.872814940 +0200
+@@ -261,6 +261,7 @@
+ 	gchar *annex;
+ 	gboolean ret = FALSE;
+ 
++	g_debug("fritzbox_present: Freeing previous data");
+ 	if (router_info->name != NULL) {
+ 		g_free(router_info->name);
+ 	}
+@@ -277,6 +278,7 @@
+ 	url = g_strdup_printf("http://%s/jason_boxinfo.xml", router_info->host);
+ 	msg = soup_message_new(SOUP_METHOD_GET, url);
+ 
++	g_debug("fritzbox_present: Query %s", url);
+ 	soup_session_send_message(soup_session_sync, msg);
+ 	if (msg->status_code != 200) {
+ 		g_object_unref(msg);
+@@ -324,8 +326,21 @@
+ 
+ 		g_strfreev(split);
+ 		ret = TRUE;
++		g_debug("fritzbox_present: Data available");
+ 	} else {
+ 		g_warning("name, version, lang or serial not valid");
++		if (name) {
++			g_warning("name is '%s'", name);
++		}
++		if (version) {
++			g_warning("version is '%s'", version);
++		}
++		if (lang) {
++			g_warning("lang is '%s'", lang);
++		}
++		if (serial) {
++			g_warning("serial is '%s'", serial);
++		}
+ 	}
+ 
+ 	g_free(annex);
+#diff -urN roger-router-1.8.4/libroutermanager/router.c roger-router-1.8.4-rolf/libroutermanager/router.c
+#--- roger-router-1.8.4/libroutermanager/router.c	2014-01-11 16:30:27.000000000 +0100
+#+++ roger-router-1.8.4-rolf/libroutermanager/router.c	2014-04-30 16:58:34.839608642 +0200
+#@@ -115,7 +115,9 @@
+#  */
+# gboolean router_present(struct router_info *router_info)
+# {
+#+	g_debug("router_present(): router = %p", router);
+# 	if (router) {
+#+		g_debug("router_present(): router->present");
+# 		return router->present(router_info);
+# 	}
+# 	return FALSE;
+diff -urN roger-router-1.8.4/roger/assistant.c roger-router-1.8.4-rolf/roger/assistant.c
+--- roger-router-1.8.4/roger/assistant.c	2014-02-15 21:37:45.000000000 +0100
++++ roger-router-1.8.4-rolf/roger/assistant.c	2014-04-30 17:03:38.119359330 +0200
+@@ -108,9 +108,11 @@
+ 	gint num = gtk_assistant_get_current_page(assistant);
+ 	GtkWidget *page = gtk_assistant_get_nth_page(assistant, num);
+ 
++	g_debug("gs: Creating new profile");
+ 	profile = profile_new(name, host, user, password);
+ 
+ 	/* Check for router */
++	g_debug("gs: router_present");
+ 	if (router_present(profile->router_info) == FALSE) {
+ 		/* Error: Could not detect box on this host name */
+ 		message = g_strdup(_("Error: Could not detect box on this host name\nPlease check the host name"));
+@@ -118,6 +120,7 @@
+ 	}
+ 
+ 	/* Get settings */
++	g_debug("gs: router_get_settings");
+ 	if (router_get_settings(profile) == FALSE) {
+ 		/* Error: Could not get settings from box */
+ 		message = g_strdup(_("Error: Could not get settings from box\nPlease check your user/password."));
+@@ -125,8 +128,10 @@
+ 	}
+ 
+ 	/* Test ftp login */
++	g_debug("gs: ftp_init");
+ 	struct ftp *ftp = ftp_init(host);
+ 	if (ftp) {
++		g_debug("gs: ftp_login");
+ 		if (!ftp_login(ftp, ftp_user, ftp_password)) {
+ 			/* Error: Could not login to ftp */
+ 			message = g_strdup(_("Error: Could not login to box ftp server\nPlease check your ftp user/password."));
+@@ -137,6 +142,7 @@
+ 	}
+ 
+ 	/* Enable telnet & capi port */
++	g_debug("gs: enable ports");
+ 	if (router_dial_number(profile, 1, "#96*5*")) {
+ 		g_usleep(G_USEC_PER_SEC);
+ 		router_hangup(profile, 1, "#96*5*");
+@@ -169,6 +175,7 @@
+ end:
+ 	gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(assistant)), NULL);
+ 
++	g_debug("gs: Message = '%s'", message);
+ 	gtk_label_set_text(GTK_LABEL(settings_label), message);
+ 
+ 	gtk_assistant_set_page_complete(assistant, page, complete);
+@@ -187,12 +194,15 @@
+ 	switch (page_num) {
+ 	case 0:
+ 		/* Introduction */
++		g_debug("Assistant: Introduction");
+ 		break;
+ 	case 1:
+ 		/* Profile name */
++		g_debug("Assistant: Profile name");
+ 		break;
+ 	case 2: {
+ 		/* Router detection */
++		g_debug("Assistant: Router detection");
+ 		gtk_assistant_set_page_complete(assistant, page, TRUE);
+ 		break;
+ 	}
+@@ -207,6 +217,7 @@
+ 		gtk_widget_set_visible(settings_spinner, TRUE);
+ 		gtk_spinner_start(GTK_SPINNER(settings_spinner));
+ 
++		g_debug("Assistant: Get settings and summary");
+ 		g_thread_new("Get settings", get_settings_thread, assistant);
+ 
+ 		break;

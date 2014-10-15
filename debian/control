@@ -1,0 +1,100 @@
+Source: roger-router
+Section: net
+Priority: extra
+Maintainer: Rolf Leggewie <foss@rolf.leggewie.biz>
+Uploaders: Jan-Michael Brummer <jan.brummer@tabos.org>
+Build-Depends: debhelper (>= 9), dh-autoreconf,
+ libappindicator3-dev,
+ libcapi20-dev (>= 1:3.24),
+ libcups2-dev,
+ libebook1.2-dev,
+ libgconf2-dev,
+ libgstreamer1.0-dev, libgstreamer-plugins-base1.0-dev,
+ libgtk-3-dev,
+ libnotify-dev,
+ libpeas-dev,
+ libpulse-dev,
+ libsecret-1-dev,
+ libsndfile1-dev,
+ libsoup2.4-dev,
+ libspandsp-dev,
+ libspeex-dev, libspeexdsp-dev,
+ libxml2-dev,
+ libtool,
+ intltool
+Standards-Version: 3.9.5
+Homepage: http://www.tabos.org/roger
+Vcs-git: git://git.debian.org/git/collab-maint/roger-router.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/roger-router.git
+
+Package: roger-router
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends},
+Depends: ${shlibs:Depends}, ${misc:Depends}, roger-router-cli
+Description: Home router management tool - GUI
+ Journal, Fax-Software and Call-Monitor for AVM FRITZ!Box or compatible
+ routers. The following features are supported through plugins:
+ .
+  * Call monitor, journal and address book
+  * Use system as softphone or dial support
+  * Fax transfer with CUPS integration.
+  * import address books from the Fritz!Box, Evolution and Thunderbird
+  * status icon and notification popus
+ .
+ A predecessor to the program was formerly called FRITZ!Box Fun (ffgtk).
+ This is the GUI version of the program including plugins.
+
+Package: roger-router-cli
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends},
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: ghostscript,
+ cups-daemon,
+ cups-client
+Description: Home router management tool - command-line interface
+ Journal, Fax-Software and Call-Monitor for AVM FRITZ!Box or compatible
+ routers. The following features are supported through plugins:
+ .
+  * Call monitor, journal and address book
+  * Use system as softphone or dial support
+  * Fax transfer with CUPS integration.
+ .
+ A predecessor to the program was formerly called FRITZ!Box Fun (ffgtk).
+ .
+ This is the command-line interface part of the package only.  The GUI
+ is available in the roger-router package.
+
+Package: ffgtk
+Section: oldlibs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, roger-router
+Description: transitional dummy package - ffgtk to roger
+ migrate users from the obsolete and abandoned ffgtk package to the
+ new Roger Router.
+ .
+ This package can be safely removed after the transition.
+
+Package: libroutermanager0
+Architecture: any
+Section: libs
+Pre-Depends: ${misc:Pre-Depends},
+Depends: ${shlibs:Depends},
+ ${misc:Depends},
+Description: Home router management tool - shared library
+ Journal, Fax-Software and Call-Monitor for AVM FRITZ!Box or compatible
+ routers.
+ .
+ This package contains the shared libraries, which are used by the main program
+ and its plugins.
+
+Package: libroutermanager-dev
+Architecture: any
+Section: libdevel
+Depends: ${misc:Depends},
+ libroutermanager0 (= ${binary:Version}),
+Description: Home router management tool - development files
+ Journal, Fax-Software and Call-Monitor for AVM FRITZ!Box or compatible
+ routers.
+ .
+ This package contains the development libraries and header files, which are
+ required to build external extensions.

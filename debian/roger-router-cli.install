@@ -1,0 +1,8 @@
+usr/bin/roger_cli
+usr/lib/*/routermanager/
+usr/lib/cups/backend/roger-cups
+usr/share/man/*/roger_cli*
+usr/share/roger/roger-cups
+usr/share/roger/roger-fax.ppd
+usr/share/roger/install-fax.sh
+

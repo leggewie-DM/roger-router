@@ -1,0 +1,15 @@
+configuration help is available from
+
+http://wiki.ubuntuusers.de/FritzBox/Roger_Router
+http://www.tabos.org/forum/
+http://forum.ubuntuusers.de/topic/roger-router-roger/
+http://en.tabos.org/installation-prequel
+
+If you want to use the incoming call notification you will have to enable
+it on your fritzbox with: #96*5*
+
+If you want to use the capifax plugin you will have to enable capi-over-tcp
+on your fritzbox with: #96*3*
+
+Please note, quick reconnect & display external ip in tooltip for Fritz!Box
+needs active UPnP support!
