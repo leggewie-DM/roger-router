@@ -1499,21 +1499,6 @@ static gpointer capi_loop(void *user_data)
 }
 
 /**
- * byteswap functions. We do not use byteswap.h
- * as it is not partable
- */
-
-static inline unsigned short bswap_16(unsigned short x)
-{
-	return (x >> 8) | (x << 8);
-}
-
-static inline unsigned int bswap_32(unsigned int x)
-{
-	return (bswap_16(x & 0xffff) << 16) | (bswap_16(x >> 16));
-}
-
-/**
  * \brief get capi profile
  * Convert capi_profile data from wire format to host format
  * \param Controller capi controller
@@ -1654,7 +1639,7 @@ struct session *faxophone_init(struct session_handlers *handlers, const char *ho
 
 			return NULL;
 		} else {
-			session = g_malloc0(sizeof(struct session));
+			session = g_slice_alloc0(sizeof(struct session));
 
 			g_mutex_init(&session->isdn_mutex);
 

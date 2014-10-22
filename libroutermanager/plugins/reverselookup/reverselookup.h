@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef AREACODES_CSV_H
-#define AREACODES_CSV_H
+#ifndef ROUTERMANAGER_REVERSELOOKUP_H
+#define ROUTERMANAGER_REVERSELOOKUP_H
 
 struct lookup {
 	gboolean prefix;

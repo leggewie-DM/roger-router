@@ -36,14 +36,14 @@ G_BEGIN_DECLS
 
 typedef enum {
 	RM_ERROR_FAX,
-	RM_ERROR_ROUTER
+	RM_ERROR_ROUTER,
+	RM_ERROR_AUDIO,
 } rm_error;
 
 GQuark rm_print_error_quark(void);
 gboolean routermanager_init(gboolean debug, GError **error);
 void routermanager_shutdown(void);
 gchar *get_directory(gchar *type);
-gchar *get_plugin_dir(void);
 
 G_END_DECLS
 

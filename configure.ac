@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce configure.
 
 m4_define([roger_major], [1])
 m4_define([roger_minor], [8])
-m4_define([roger_micro], [7])
+m4_define([roger_micro], [9])
 
 m4_define([roger_version],[roger_major.roger_minor.roger_micro])
 
@@ -10,7 +10,7 @@ AC_INIT([Roger Router],[roger_version],[http://www.tabos.org/roger])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 AC_PREFIX_DEFAULT(/usr)
-AM_INIT_AUTOMAKE([1.11 no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([1.11 no-dist-gzip dist-xz foreign subdir-objects])
 AC_CONFIG_HEADERS(config.h)
 
 AC_CONFIG_MACRO_DIR(m4)
@@ -95,6 +95,10 @@ PKG_CHECK_MODULES([SOUP], [libsoup-2.4])
 
 PKG_CHECK_MODULES([PEAS], [libpeas-1.0])
 PKG_CHECK_MODULES([PEAS_GTK], [libpeas-gtk-1.0])
+
+#PKG_CHECK_MODULES([TIFF], [libtiff-4])
+AC_CHECK_HEADERS([tiffio.h])
+AC_CHECK_LIB([tiff], [TIFFOpen], , AC_MSG_ERROR("Can't build without libtiff (does your system require a libtiff-devel package?)"), -lm)
 
 # Introspection
 #GOBJECT_INTROSPECTION_CHECK([0.9.3])
@@ -621,10 +625,15 @@ AM_CONDITIONAL(WITH_APPINDICATOR3, test "x$with_appindicator3" != "xno")
 AC_ARG_ENABLE(werror,
 	AS_HELP_STRING([--disable-werror], [don't use gcc's -Werror option when building]))
 
-if test x"$enable_Werror" != xno
+if test x"$enable_werror" != xno
 then
 	EXTRA_CFLAGS+="-Werror"
 fi
+
+dnl ********************************************************************
+dnl Check for coverage tool gcov
+dnl ********************************************************************
+dnl AC_TDD_GCOV
 
 AC_CONFIG_FILES([
     Makefile
@@ -638,10 +647,12 @@ AC_CONFIG_FILES([
     libroutermanager/data/Makefile
     libroutermanager/plugins/Makefile
     libroutermanager/plugins/fritzbox/Makefile
+    libroutermanager/plugins/speedport/Makefile
     libroutermanager/plugins/callmonitor/Makefile
     libroutermanager/plugins/areacodes_global/Makefile
     libroutermanager/plugins/pulseaudio/Makefile
     libroutermanager/plugins/reverselookup/Makefile
+    libroutermanager/plugins/webjournal/Makefile
     libroutermanager/plugins/wincred/Makefile
     libroutermanager/plugins/portaudio/Makefile
     libroutermanager/plugins/gstreamer1/Makefile

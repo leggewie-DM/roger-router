@@ -163,7 +163,7 @@ static gboolean do_reverse_lookup(struct lookup *lookup, gchar *number, gchar **
 	}
 
 #ifdef RL_DEBUG
-	g_debug("Match found: %s->%s", number, *name);
+	g_debug("Match found: %s->'%s'", number, *name);
 #endif
 
 	rl_tmp = g_match_info_fetch_named(info, "street");
@@ -189,11 +189,18 @@ static gboolean do_reverse_lookup(struct lookup *lookup, gchar *number, gchar **
 	}
 
 	rl_tmp = g_match_info_fetch_named(info, "city");
-	if (rl_tmp != NULL) {
+	if (!EMPTY_STRING(rl_tmp)) {
+		gchar **split;
+
 #ifdef RL_DEBUG
 		g_debug("city: %s", rl_tmp);
 #endif
 		*city = strip_html(rl_tmp);
+
+		split = g_strsplit(*city, "\n", -1);
+		*city = g_strdup(split[0]);
+		g_strfreev(split);
+
 		g_free(rl_tmp);
 	} else {
 		*city = g_strdup("");
@@ -430,7 +437,7 @@ static void lookup_add(xmlnode *node)
 		pattern = tmp;
 	}
 
-	lookup = g_malloc0(sizeof(struct lookup));
+	lookup = g_slice_alloc0(sizeof(struct lookup));
 	g_debug("Service: '%s', prefix: %s", service, prefix);
 	lookup->service = service;
 	lookup->prefix = prefix[ 0 ] == '1';
@@ -463,6 +470,7 @@ static void country_code_add(xmlnode *node)
 
 static void lookup_read_cache(gchar *dir_name)
 {
+#ifndef RL_DEBUG
 	GDir *dir;
 	GError *error = NULL;
 	const gchar *file_name;
@@ -488,12 +496,13 @@ static void lookup_read_cache(gchar *dir_name)
 		contact->name = g_strdup(split[1]);
 		contact->street = g_strdup(split[2]);
 		contact->zip = g_strdup(split[3]);
-		contact->city = g_strdup(split[4]);
+		contact->city = g_strstrip(g_strdup(split[4]));
 
 		g_hash_table_insert(table, g_strdup(split[0]), contact);
 
 		g_strfreev(split);
 	}
+#endif
 }
 
 /**
@@ -509,13 +518,20 @@ static void impl_activate(PeasActivatable *plugin)
 	reverselookup_plugin->priv->table = g_hash_table_new(g_str_hash, g_str_equal);
 	table = g_hash_table_new(g_str_hash, g_str_equal);
 
-	file = g_strconcat(get_directory(ROUTERMANAGER_PLUGINS), G_DIR_SEPARATOR_S, "reverselookup", G_DIR_SEPARATOR_S, "lookup.xml", NULL);
+	file = g_build_filename(g_get_home_dir(), "lookup.xml", NULL);
+	if (!g_file_test(file, G_FILE_TEST_EXISTS)) {
+		g_free(file);
+
+		file = g_build_filename(get_directory(ROUTERMANAGER_PLUGINS), "reverselookup", "lookup.xml", NULL);
+	}
+
 	node = read_xml_from_file(file);
 	if (!node) {
 		g_debug("Could not read %s", file);
 		g_free(file);
 		return;
 	}
+	g_debug("ReverseLookup: '%s'", file);
 	g_free(file);
 
 	/* Create new lookup hash table */

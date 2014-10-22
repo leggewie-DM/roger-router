@@ -54,6 +54,9 @@
 /* Have libnotify */
 #undef HAVE_LIBNOTIFY
 
+/* Define to 1 if you have the `tiff' library (-ltiff). */
+#undef HAVE_LIBTIFF
+
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
@@ -89,6 +92,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <tiffio.h> header file. */
+#undef HAVE_TIFFIO_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

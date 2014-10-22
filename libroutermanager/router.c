@@ -17,26 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-/**
- * TODO:
- *  - Free phone list function
- *  - Multiple router at the same time support?
- */
-
 #include <string.h>
 
 #include <libroutermanager/router.h>
 #include <libroutermanager/appobject-emit.h>
 #include <libroutermanager/contact.h>
-#include <libroutermanager/phone.h>
 #include <libroutermanager/gstring.h>
 #include <libroutermanager/file.h>
 #include <libroutermanager/csv.h>
 #include <libroutermanager/password.h>
 
 /** Active router structure */
-static struct router *router = NULL;
+static struct router *active_router = NULL;
+/** Global router plugin list */
+static GSList *router_list = NULL;
 
+/** Mapping between config value and port type */
 struct phone_port router_phone_ports[NUM_PHONE_PORTS] = {
 	{"name-analog1", PORT_ANALOG1, -1},
 	{"name-analog2", PORT_ANALOG2, -1},
@@ -99,6 +95,27 @@ GSList *router_get_phone_list(struct profile *profile)
 }
 
 /**
+ * \brief Free one phone list entry
+ * \param data pointer to phone structure
+ */
+static void free_phone_list(gpointer data)
+{
+	struct phone *phone = data;
+
+	g_free(phone->name);
+	g_free(phone->type);
+}
+
+/**
+ * \brief Free full phone list
+ * \param phone_list phone list
+ */
+void router_free_phone_list(GSList *phone_list)
+{
+	g_slist_free_full(phone_list, free_phone_list);
+}
+
+/**
  * \brief Get array of phone numbers
  * \param profile profile structure
  * \return phone number array
@@ -115,9 +132,21 @@ gchar **router_get_numbers(struct profile *profile)
  */
 gboolean router_present(struct router_info *router_info)
 {
-	if (router) {
-		return router->present(router_info);
+	GSList *list;
+
+	if (!router_list) {
+		return FALSE;
 	}
+
+	for (list = router_list; list != NULL; list = list->next) {
+		struct router *router = list->data;
+
+		if (router->present(router_info)) {
+			active_router = router;
+			return TRUE;
+		}
+	}
+
 	return FALSE;
 }
 
@@ -128,38 +157,27 @@ gboolean router_present(struct router_info *router_info)
  */
 gboolean router_login(struct profile *profile)
 {
-	if (router) {
-		return router->login(profile);
-	}
-	return FALSE;
+	return active_router ? active_router->login(profile) : FALSE;
 }
-
 
 /**
  * \brief Router logout
  * \param profile profile information structure
- * \return login state
+ * \return logout state
  */
 gboolean router_logout(struct profile *profile)
 {
-	if (router) {
-		return router->logout(profile, TRUE);
-	}
-	return FALSE;
+	return active_router ? active_router->logout(profile, TRUE) : FALSE;
 }
 
 /**
  * \brief Get router host
  * \param profile profile information structure
- * \return router host
+ * \return router host or "" if no profile is active
  */
 gchar *router_get_host(struct profile *profile)
 {
-	if (!profile) {
-		return "";
-	}
-
-	return g_settings_get_string(profile->settings, "host");
+	return profile ? g_settings_get_string(profile->settings, "host") : "";
 }
 
 /**
@@ -261,11 +279,7 @@ gchar *router_get_country_code(struct profile *profile)
  */
 gboolean router_get_settings(struct profile *profile)
 {
-	if (!router) {
-		return FALSE;
-	}
-
-	return router->get_settings(profile);
+	return active_router ? active_router->get_settings(profile) : FALSE;
 }
 
 /**
@@ -303,11 +317,7 @@ const gchar *router_get_version(struct profile *profile)
  */
 gboolean router_load_journal(struct profile *profile)
 {
-	if (!router) {
-		return FALSE;
-	}
-
-	return router->load_journal(profile, NULL);
+	return active_router ? active_router->load_journal(profile, NULL) : FALSE;
 }
 /**
  * \brief Clear router journal
@@ -316,7 +326,7 @@ gboolean router_load_journal(struct profile *profile)
  */
 gboolean router_clear_journal(struct profile *profile)
 {
-	return router->clear_journal(profile);
+	return active_router->clear_journal(profile);
 }
 
 /**
@@ -328,7 +338,7 @@ gboolean router_clear_journal(struct profile *profile)
  */
 gboolean router_dial_number(struct profile *profile, gint port, const gchar *number)
 {
-	return router->dial_number(profile, port, number);
+	return active_router->dial_number(profile, port, number);
 }
 
 /**
@@ -340,16 +350,18 @@ gboolean router_dial_number(struct profile *profile, gint port, const gchar *num
  */
 gboolean router_hangup(struct profile *profile, gint port, const gchar *number)
 {
-	return router->hangup(profile, port, number);
+	return active_router->hangup(profile, port, number);
 }
 
 /**
  * \brief Register new router
- * \param router_new new router structure
+ * \param router new router structure
  */
-gboolean routermanager_router_register(struct router *router_new)
+gboolean routermanager_router_register(struct router *router)
 {
-	router = router_new;
+	g_debug("Registering router plugin: '%s'", router->name);
+	router_list = g_slist_prepend(router_list, router);
+
 	return TRUE;
 }
 
@@ -359,11 +371,11 @@ gboolean routermanager_router_register(struct router *router_new)
  */
 gboolean router_init(void)
 {
-	if (router) {
+	if (g_slist_length(router_list)) {
 		return TRUE;
 	}
 
-	g_warning("Warning, no router!");
+	g_warning("No router plugin registered!");
 	return FALSE;
 }
 
@@ -373,7 +385,14 @@ gboolean router_init(void)
  */
 void router_shutdown(void)
 {
-	router = NULL;
+	/* Free router list */
+	if (router_list != NULL) {
+		g_slist_free(router_list);
+		router_list = NULL;
+	}
+
+	/* Unset active router */
+	active_router = NULL;
 }
 
 /**
@@ -384,10 +403,13 @@ void router_process_journal(GSList *journal)
 {
 	GSList *list;
 
-	/* Parse offline journal */
+	/* Parse offline journal and combine new entries */
 	journal = csv_load_journal(journal);
+
+	/* Store it back to disk */
 	csv_save_journal(journal);
 
+	/* Try to lookup entries in address book */
 	for (list = journal; list; list = list->next) {
 		struct call *call = list->data;
 
@@ -408,7 +430,7 @@ void router_process_journal(GSList *journal)
  */
 gchar *router_load_fax(struct profile *profile, const gchar *filename, gsize *len)
 {
-	return router->load_fax(profile, filename, len);
+	return filename[0] == '/' ? file_load((gchar*)filename, len) : active_router->load_fax(profile, filename, len);
 }
 
 /**
@@ -420,7 +442,7 @@ gchar *router_load_fax(struct profile *profile, const gchar *filename, gsize *le
  */
 gchar *router_load_voice(struct profile *profile, const gchar *name, gsize *len)
 {
-	return router->load_voice(profile, name, len);
+	return active_router->load_voice(profile, name, len);
 }
 
 /**
@@ -430,7 +452,7 @@ gchar *router_load_voice(struct profile *profile, const gchar *name, gsize *len)
  */
 gchar *router_get_ip(struct profile *profile)
 {
-	return router->get_ip(profile);
+	return active_router->get_ip(profile);
 }
 
 /**
@@ -440,7 +462,7 @@ gchar *router_get_ip(struct profile *profile)
  */
 gboolean router_reconnect(struct profile *profile)
 {
-	return router->reconnect(profile);
+	return active_router->reconnect(profile);
 }
 
 /**
@@ -451,7 +473,7 @@ gboolean router_reconnect(struct profile *profile)
  */
 gboolean router_delete_fax(struct profile *profile, const gchar *filename)
 {
-	return router->delete_fax(profile, filename);
+	return active_router->delete_fax(profile, filename);
 }
 
 /**
@@ -462,20 +484,94 @@ gboolean router_delete_fax(struct profile *profile, const gchar *filename)
  */
 gboolean router_delete_voice(struct profile *profile, const gchar *filename)
 {
-	return router->delete_voice(profile, filename);
+	return active_router->delete_voice(profile, filename);
 }
 
+/**
+ * \brief Free router info structure
+ * \param info router_info structure
+ * \return TRUE if structure is freed, otherwise FALSE
+ */
 gboolean router_info_free(struct router_info *info)
 {
 	if (info) {
-		/* FIXME */
 		g_free(info->name);
 		g_free(info->serial);
 		g_free(info->version);
 		g_free(info->lang);
+		g_free(info->annex);
+
+		g_free(info->host);
+		g_free(info->user);
+		g_free(info->password);
+		g_free(info->session_id);
+
+		if (info->session_timer) {
+			g_timer_destroy(info->session_timer);
+		}
+
 		g_slice_free(struct router_info, info);
+
 		return TRUE;
 	}
 
 	return FALSE;
+}
+
+/**
+ * \brief Check if router is using cable as annex
+ * \param profile profile structure
+ * \return TRUE if cable is used, otherwise FALSE
+ */
+gboolean router_is_cable(struct profile *profile)
+{
+	gboolean is_cable = FALSE;
+
+	if (!EMPTY_STRING(profile->router_info->annex) && !strcmp(profile->router_info->annex, "Kabel")) {
+		is_cable = TRUE;
+	}
+
+	return is_cable;
+}
+
+/**
+ * \brief Load fax reports and add them to the journal
+ * \param profile profile structure
+ * \param journal journal list pointer
+ * \return new journal list with attached fax reports
+ */
+GSList *router_load_fax_reports(struct profile *profile, GSList *journal)
+{
+	GDir *dir;
+	GError *error = NULL;
+	const gchar *file_name;
+	gchar *dir_name = g_settings_get_string(profile->settings, "fax-report-dir");
+
+	dir = g_dir_open(dir_name, 0, &error);
+
+	while ((file_name = g_dir_read_name(dir))) {
+		gchar *uri;
+		gchar **split;
+		gchar *date_time;
+
+		if (strncmp(file_name, "fax-report", 10)) {
+			continue;
+		}
+
+		split = g_strsplit(file_name, "_", -1);
+		if (g_strv_length(split) != 9) {
+			g_strfreev(split);
+			continue;
+		}
+
+		uri = g_build_filename(dir_name, file_name, NULL);
+
+		date_time = g_strdup_printf("%s.%s.%s %2.2s:%2.2s", split[3], split[4], split[5] + 2, split[6], split[7]);
+		journal = call_add(journal, CALL_TYPE_FAX_REPORT, date_time, "", split[2], ("Fax-Report"), split[1], "0:01", g_strdup(uri));
+
+		g_free(uri);
+		g_strfreev(split);
+	}
+
+	return journal;
 }

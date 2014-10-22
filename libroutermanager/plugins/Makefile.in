@@ -149,8 +149,9 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = fritzbox callmonitor areacodes_global reverselookup \
-	pulseaudio portaudio gstreamer1 secret wincred
+DIST_SUBDIRS = fritzbox speedport callmonitor areacodes_global \
+	reverselookup webjournal pulseaudio portaudio gstreamer1 \
+	secret wincred
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -382,9 +383,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = fritzbox callmonitor areacodes_global reverselookup \
-	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5)
+SUBDIRS = fritzbox speedport callmonitor areacodes_global \
+	reverselookup webjournal $(am__append_1) $(am__append_2) \
+	$(am__append_3) $(am__append_4) $(am__append_5)
 all: all-recursive
 
 .SUFFIXES:
@@ -397,9 +398,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu libroutermanager/plugins/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign libroutermanager/plugins/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu libroutermanager/plugins/Makefile
+	  $(AUTOMAKE) --foreign libroutermanager/plugins/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

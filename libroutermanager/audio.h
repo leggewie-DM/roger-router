@@ -20,6 +20,8 @@
 #ifndef LIBROUTERMANAGER_AUDIO_H
 #define LIBROUTERMANAGER_AUDIO_H
 
+#include <libroutermanager/profile.h>
+
 G_BEGIN_DECLS
 
 #define AUDIO_OUTPUT 0
@@ -38,7 +40,7 @@ struct audio {
 	/* Read data of audio device */
 	gsize (*read)(gpointer priv, guchar *buffer, gsize max_len);
 	/* Close audio device */
-	gboolean (*close)(gpointer priv, gboolean force);
+	gboolean (*close)(gpointer priv);
 	/* Shutdown audio device */
 	gboolean (*deinit)(void);
 	/* Get possible audio input/output devices */
@@ -57,6 +59,9 @@ gpointer audio_open(void);
 gsize audio_read(gpointer audio_priv, guchar *data, gsize size);
 gsize audio_write(gpointer audio_priv, guchar *data, gsize size);
 gboolean audio_close(gpointer audio_priv);
+GSList *audio_get_plugins(void);
+void audio_set_default(gchar *name);
+void audio_init(struct profile *profile);
 
 G_END_DECLS
 

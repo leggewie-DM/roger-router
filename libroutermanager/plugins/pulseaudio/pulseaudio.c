@@ -375,23 +375,17 @@ static void *pulse_audio_open(void)
 /**
  * \brief Close audio pipelines
  * \param priv pointer to private input/output pipes
- * \param force force quit
  * \return error code
  */
-static int pulse_audio_close(void *priv, gboolean force)
+static int pulse_audio_close(void *priv)
 {
 	struct pulse_pipes *pipes = priv;
-	int error;
 
 	if (!pipes) {
 		return -EINVAL;
 	}
 
 	if (pipes->simple_out) {
-		if (pa_simple_drain(pipes->simple_out, &error) < 0) {
-			g_debug("Failed: %s", pa_strerror(error));
-		}
-
 		pa_simple_free(pipes->simple_out);
 		pipes->simple_out = NULL;
 	}

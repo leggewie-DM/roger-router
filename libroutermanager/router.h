@@ -60,6 +60,25 @@ G_BEGIN_DECLS
 
 #define PORT_SOFTPHONE 0x10000000
 
+enum phone_number_type {
+	PHONE_NUMBER_HOME,
+	PHONE_NUMBER_WORK,
+	PHONE_NUMBER_MOBILE,
+	PHONE_NUMBER_FAX_HOME,
+	PHONE_NUMBER_FAX_WORK,
+	PHONE_NUMBER_PAGER,
+};
+
+struct phone {
+	gchar *name;
+	gchar *type;
+};
+
+struct phone_number {
+	enum phone_number_type type;
+	gchar *number;
+};
+
 struct phone_port {
 	gchar *name;
 	gint type;
@@ -75,6 +94,7 @@ struct router_info {
 	gchar *serial;
 	gchar *session_id;
 	gchar *lang;
+	gchar *annex;
 
 	/* Extend */
 	gint box_id;
@@ -84,6 +104,7 @@ struct router_info {
 };
 
 struct router {
+	const gchar *name;
 	gboolean (*present)(struct router_info *router_info);
 	gboolean (*login)(struct profile *profile);
 	gboolean (*logout)(struct profile *profile, gboolean force);
@@ -141,6 +162,11 @@ gchar *router_load_fax(struct profile *profile, const gchar *filename, gsize *le
 gchar *router_load_voice(struct profile *profile, const gchar *filename, gsize *len);
 
 gboolean router_info_free(struct router_info *info);
+gboolean router_is_cable(struct profile *profile);
+
+GSList *router_load_fax_reports(struct profile *profile, GSList *journal);
+
+void router_free_phone_list(GSList *phone_list);
 
 G_END_DECLS
 

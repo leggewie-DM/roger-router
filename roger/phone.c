@@ -33,8 +33,6 @@
 #include <libroutermanager/routermanager.h>
 #include <libroutermanager/profile.h>
 #include <libroutermanager/router.h>
-#include <libroutermanager/number.h>
-#include <libroutermanager/phone.h>
 #include <libroutermanager/fax_phone.h>
 #include <libroutermanager/libfaxophone/phone.h>
 #include <libroutermanager/libfaxophone/isdn-convert.h>
@@ -277,7 +275,8 @@ static void port_combobox_changed_cb(GtkComboBox *widget, gpointer user_data)
 
 void phone_fill_combobox(GtkWidget *port_combobox, struct phone_state *state)
 {
-	GSList *phone_list = router_get_phone_list(profile_get_active());
+	GSList *phone_list;
+	GSList *list;
 	struct profile *profile = profile_get_active();
 	struct phone *phone;
 	gchar tmp[10];
@@ -287,11 +286,12 @@ void phone_fill_combobox(GtkWidget *port_combobox, struct phone_state *state)
 		return;
 	}
 
-	while (phone_list) {
-		phone = phone_list->data;
+	phone_list = router_get_phone_list(profile_get_active());
+
+	for (list = phone_list; list != NULL; list = list->next) {
+		phone = list->data;
 
 		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(port_combobox), phone->type, phone->name);
-		phone_list = phone_list->next;
 	}
 
 	snprintf(tmp, sizeof(tmp), "%d", PORT_SOFTPHONE);
@@ -307,6 +307,8 @@ void phone_fill_combobox(GtkWidget *port_combobox, struct phone_state *state)
 	} else {
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(port_combobox), tmp);
 	}
+
+	router_free_phone_list(phone_list);
 }
 
 static void phone_connection_failed(void)
@@ -363,11 +365,13 @@ static void pickup_button_clicked_cb(GtkWidget *button, gpointer user_data)
 			}
 			break;
 		case PHONE_TYPE_FAX: {
-			gpointer connection = fax_dial(state->priv, state->number);
+			struct fax_ui *fax_ui = state->priv;
+
+			gpointer connection = fax_dial(fax_ui->file, state->number);
 			if (connection) {
 				phone_add_connection(connection);
 				snprintf(state->phone_status_text, sizeof(state->phone_status_text), _("Dialing"));
-				fax_window_clear();
+				fax_window_clear(fax_ui);
 				phone_setup_timer(state);
 			} else {
 				phone_connection_failed();
@@ -570,9 +574,10 @@ static gboolean number_entry_match_selected_cb(GtkEntryCompletion *completion, G
 	return FALSE;
 }
 
-gboolean number_entry_contains_completion_cb(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iter, gpointer user_data)
+gboolean number_entry_contains_completion_cb(GtkEntryCompletion *completion, const gchar *norm_key, GtkTreeIter *iter, gpointer user_data)
 {
 	GtkTreeModel *model = gtk_entry_completion_get_model(completion);
+	const gchar *key = gtk_entry_get_text(GTK_ENTRY(gtk_entry_completion_get_entry(completion)));
 	gchar *name;
 	gboolean found = FALSE;
 
@@ -665,14 +670,13 @@ GtkWidget *phone_dial_frame(GtkWidget *window, struct contact *contact, struct p
 		struct contact *contact = list->data;
 
 		gtk_list_store_append(list_store, &iter);
-		gtk_list_store_set(list_store, &iter, 0, contact->name, 1, contact,  -1);
+		gtk_list_store_set(list_store, &iter, 0, contact->name, 1, contact, -1);
 	}
 
 	gtk_entry_completion_set_model(completion, GTK_TREE_MODEL(list_store));
-	//gtk_entry_completion_set_inline_completion(completion, TRUE);
-	g_signal_connect(completion, "match-selected", G_CALLBACK(number_entry_match_selected_cb), state);
 	gtk_entry_completion_set_match_func(completion, number_entry_contains_completion_cb, NULL, NULL);
 	gtk_entry_set_completion(GTK_ENTRY(state->name_entry), completion);
+	g_signal_connect(completion, "match-selected", G_CALLBACK(number_entry_match_selected_cb), state);
 
 	/* Pickup button */
 	pickup_button = gtk_button_new();

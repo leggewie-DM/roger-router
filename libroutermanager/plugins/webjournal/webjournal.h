@@ -17,24 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef LIBROUTERMANAGER_NUMBER_H
-#define LIBROUTERMANAGER_NUMBER_H
+#ifndef ROUTERMANAGER_WEBJOURNAL_H
+#define ROUTERMANAGER_WEBJOURNAL_H
 
 G_BEGIN_DECLS
-
-enum phone_number_type {
-	PHONE_NUMBER_HOME,
-	PHONE_NUMBER_WORK,
-	PHONE_NUMBER_MOBILE,
-	PHONE_NUMBER_FAX_HOME,
-	PHONE_NUMBER_FAX_WORK,
-	PHONE_NUMBER_PAGER,
-};
-
-struct phone_number {
-	enum phone_number_type type;
-	gchar *number;
-};
 
 G_END_DECLS
 

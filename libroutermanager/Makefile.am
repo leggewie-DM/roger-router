@@ -62,18 +62,14 @@ libroutermanager_la_SOURCES = \
 	net_monitor.h\
 	network.c\
 	network.h\
-	number.h\
 	osdep.c\
 	osdep.h\
 	password.c\
 	password.h\
-	phone.h\
 	plugins.c\
 	plugins.h\
 	profile.c\
 	profile.h\
-	remote.c\
-	remote.h\
 	router.c\
 	router.h\
 	voxplay.c\

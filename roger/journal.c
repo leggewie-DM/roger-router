@@ -23,6 +23,8 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdk.h>
+#include <glib.h>
+#include <glib/gstdio.h>
 
 #include <libroutermanager/profile.h>
 #include <libroutermanager/router.h>
@@ -37,7 +39,6 @@
 #include <libroutermanager/lookup.h>
 #include <libroutermanager/csv.h>
 #include <libroutermanager/gstring.h>
-#include <libroutermanager/remote.h>
 
 #include <roger/main.h>
 #include <roger/phone.h>
@@ -61,8 +62,8 @@ GdkPixbuf *icon_call_missed = NULL;
 GdkPixbuf *icon_call_out = NULL;
 GdkPixbuf *icon_fax = NULL;
 GdkPixbuf *icon_voice = NULL;
-struct filter *journal_filter = NULL;
-struct filter *journal_search_filter = NULL;
+static struct filter *journal_filter = NULL;
+static struct filter *journal_search_filter = NULL;
 static GtkWidget *spinner = NULL;
 static GMutex journal_mutex;
 gboolean use_header_bar = FALSE;
@@ -170,6 +171,7 @@ GdkPixbuf *journal_get_call_icon(gint type)
 	case CALL_TYPE_OUTGOING:
 		return icon_call_out;
 	case CALL_TYPE_FAX:
+	case CALL_TYPE_FAX_REPORT:
 		return icon_fax;
 	case CALL_TYPE_VOICE:
 		return icon_voice;
@@ -267,6 +269,7 @@ static gboolean reload_journal(gpointer user_data)
 
 		if (call->remote->lookup) {
 			gtk_list_store_set(list_store, &iter, JOURNAL_COL_NAME, call->remote->name, -1);
+			gtk_list_store_set(list_store, &iter, JOURNAL_COL_CITY, call->remote->city, -1);
 		}
 		valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(list_store), &iter);
 	}
@@ -318,7 +321,7 @@ void journal_loaded_cb(AppObject *obj, GSList *journal, gpointer unused)
 		return;
 	}
 
-	if (!gtk_widget_get_visible(spinner)) {
+	if (spinner && !gtk_widget_get_visible(spinner)) {
 		gtk_spinner_start(GTK_SPINNER(spinner));
 		gtk_widget_show(spinner);
 	}
@@ -406,6 +409,9 @@ void delete_foreach(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, g
 		break;
 	case CALL_TYPE_FAX:
 		router_delete_fax(profile_get_active(), call->priv);
+		break;
+	case CALL_TYPE_FAX_REPORT:
+		g_unlink(call->priv);
 		break;
 	default:
 		journal_list = g_slist_remove(journal_list, call);
@@ -595,28 +601,28 @@ struct journal_playback
 	gint fraction;
 
 	GtkWidget *media_button;
-	GtkWidget *progress;
+	GtkWidget *scale;
 };
 
-void vox_playback_cb(gpointer progress, gpointer frac)
+gboolean vox_update_ui(gpointer data)
 {
-	struct journal_playback *playback_data = progress;
-	gint fraction = GPOINTER_TO_INT(frac);
+	struct journal_playback *playback_data = data;
+	gint fraction;
 
-	if (playback_data && playback_data->progress) {
+	fraction = vox_get_fraction(playback_data->vox_data);
+
+	if (playback_data->fraction != fraction) {
 		playback_data->fraction = fraction;
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(playback_data->progress), (float)fraction / (float)100);
 
-		if (fraction == 100) {
+		gtk_range_set_value(GTK_RANGE(playback_data->scale), (float)playback_data->fraction / (float)100);
+
+		if (playback_data->fraction == 100) {
 			GtkWidget *media_image = gtk_image_new_from_icon_name("media-playback-start-symbolic", GTK_ICON_SIZE_BUTTON);
 			gtk_button_set_image(GTK_BUTTON(playback_data->media_button), media_image);
 		}
 	}
-}
 
-void remote_vox_playback_cb(gpointer progress, gpointer fraction)
-{
-	remote_port_invoke_call(remote_port_get_main(), vox_playback_cb, progress, fraction);
+	return TRUE;
 }
 
 void vox_media_button_clicked_cb(GtkWidget *button, gpointer user_data)
@@ -634,14 +640,22 @@ void vox_media_button_clicked_cb(GtkWidget *button, gpointer user_data)
 
 		gtk_button_set_image(GTK_BUTTON(playback_data->media_button), media_image);
 	} else {
-		if (playback_data->vox_data) {
-			vox_stop(playback_data->vox_data);
-		}
-		playback_data->vox_data = vox_play(playback_data->data, playback_data->len, remote_vox_playback_cb, playback_data);
+		vox_play(playback_data->vox_data);
 
 		GtkWidget *media_image = gtk_image_new_from_icon_name("media-playback-pause-symbolic", GTK_ICON_SIZE_BUTTON);
 		gtk_button_set_image(GTK_BUTTON(playback_data->media_button), media_image);
 	}
+}
+
+gboolean vox_scale_change_value_cb(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data)
+{
+	struct journal_playback *playback_data = user_data;
+
+	if (playback_data->vox_data && playback_data->fraction != 100) {
+		vox_seek(playback_data->vox_data, value);
+	}
+
+	return FALSE;
 }
 
 void journal_play_voice(const gchar *name)
@@ -650,15 +664,24 @@ void journal_play_voice(const gchar *name)
 	GtkWidget *content_area;
 	GtkWidget *grid;
 	GtkWidget *media_button;
-	GtkWidget *progress;
+	GtkWidget *scale;
 	GtkWidget *label;
 	gsize len = 0;
 	gchar *data = router_load_voice(profile_get_active(), name, &len);
-	gpointer vox_data;
 	struct journal_playback *playback_data;
+	guint update_id;
+	GError *error = NULL;
+	gpointer vox;
 
 	if (!data || !len) {
 		g_debug("could not load file!");
+		g_free(data);
+		return;
+	}
+
+	vox = vox_init(data, len, &error);
+	if (!vox) {
+		g_debug("Could not init vox!");
 		g_free(data);
 		return;
 	}
@@ -670,6 +693,7 @@ void journal_play_voice(const gchar *name)
 	playback_data = g_slice_new(struct journal_playback);
 	playback_data->data = data;
 	playback_data->len = len;
+	playback_data->vox_data = vox;
 
 	grid = gtk_grid_new();
 	gtk_widget_set_margin(grid, 12, 12, 12, 12);
@@ -686,31 +710,35 @@ void journal_play_voice(const gchar *name)
 	gtk_button_set_image(GTK_BUTTON(media_button), media_image);
 	gtk_grid_attach(GTK_GRID(grid), media_button, 0, 1, 1, 1);
 
-	progress = gtk_progress_bar_new();
-	gtk_widget_set_valign(progress, GTK_ALIGN_CENTER);
-	playback_data->progress = progress;
-	gtk_widget_set_hexpand(progress, TRUE);
-	gtk_grid_attach(GTK_GRID(grid), progress, 1, 1, 1, 1);
+	scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0.0f, 1.0f, 0.1f);
+	gtk_scale_set_draw_value(GTK_SCALE(scale), FALSE);
+	gtk_widget_set_valign(scale, GTK_ALIGN_CENTER);
+	playback_data->scale = scale;
+	g_signal_connect(scale, "change-value", G_CALLBACK(vox_scale_change_value_cb), playback_data);
+	gtk_widget_set_hexpand(scale, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), scale, 1, 1, 1, 1);
 
 	gtk_container_add(GTK_CONTAINER(content_area), grid);
 	gtk_widget_set_size_request(dialog, 300, 150);
 	gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
 
-	vox_data = vox_play(data, len, remote_vox_playback_cb, playback_data);
-	playback_data->vox_data = vox_data;
+	update_id = g_timeout_add(250, vox_update_ui, playback_data);
+	vox_play(playback_data->vox_data);
 
 	gtk_widget_show_all(content_area);
 	gtk_dialog_run(GTK_DIALOG(dialog));
+
+	g_source_remove(update_id);
 
 	if (playback_data->vox_data) {
 		vox_stop(playback_data->vox_data);
 	}
 
 	gtk_widget_destroy(dialog);
-	playback_data->progress = NULL;
+	playback_data->scale = NULL;
 
-	//TODO: Free memory
-	//g_free(data);
+	g_free(data);
+	g_slice_free(struct journal_playback, playback_data);
 }
 
 void row_activated_foreach(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data)
@@ -720,6 +748,7 @@ void row_activated_foreach(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *
 	gtk_tree_model_get(model, iter, JOURNAL_COL_CALL_PTR, &call, -1);
 
 	switch (call->type) {
+	case CALL_TYPE_FAX_REPORT:
 	case CALL_TYPE_FAX: {
 		gsize len = 0;
 		gchar *data = router_load_fax(profile_get_active(), call->priv, &len);
@@ -1409,7 +1438,7 @@ GtkWidget *journal_window(GApplication *app, GFile *file)
 
 	//gtk_window_set_hide_titlebar_when_maximized(GTK_WINDOW(journal_win), TRUE);
 	gtk_widget_hide_on_delete(journal_win);
-	gtk_window_set_has_resize_grip(GTK_WINDOW(journal_win), FALSE);
+	//gtk_window_set_has_resize_grip(GTK_WINDOW(journal_win), FALSE);
 
 	filter_box_changed(GTK_COMBO_BOX(journal_filter_box), NULL);
 

@@ -31,9 +31,11 @@
 #include <libroutermanager/network.h>
 #include <libroutermanager/call.h>
 #include <libroutermanager/ftp.h>
+#include <libroutermanager/gstring.h>
 
 #include "fritzbox.h"
 #include "firmware-common.h"
+#include "firmware-plain.h"
 
 /** phone port names */
 struct phone_port fritzbox_phone_ports[NUM_PHONE_PORTS] = {
@@ -256,6 +258,7 @@ gboolean fritzbox_present(struct router_info *router_info)
 	gchar *lang;
 	gchar *serial;
 	gchar *url;
+	gchar *annex;
 	gboolean ret = FALSE;
 
 	if (router_info->name != NULL) {
@@ -276,9 +279,14 @@ gboolean fritzbox_present(struct router_info *router_info)
 
 	soup_session_send_message(soup_session_sync, msg);
 	if (msg->status_code != 200) {
-		g_warning("Could not read boxinfo file");
 		g_object_unref(msg);
 		g_free(url);
+
+		if (msg->status_code == 404) {
+			ret = fritzbox_present_plain(router_info);
+		} else {
+			g_warning("Could not read boxinfo file (Error: %d)", msg->status_code);
+		}
 
 		return ret;
 	}
@@ -292,17 +300,19 @@ gboolean fritzbox_present(struct router_info *router_info)
 	version = xml_extract_tag(data, "j:Version");
 	lang = xml_extract_tag(data, "j:Lang");
 	serial = xml_extract_tag(data, "j:Serial");
+	annex = xml_extract_tag(data, "j:Annex");
 
 	g_object_unref(msg);
 	g_free(url);
 
-	if (name && version && lang && serial) {
+	if (name && version && lang && serial && annex) {
 		gchar **split;
 
 		router_info->name = g_strdup(name);
 		router_info->version = g_strdup(version);
 		router_info->lang = g_strdup(lang);
 		router_info->serial = g_strdup(serial);
+		router_info->annex = g_strdup(annex);
 
 		/* Version: Box.Major.Minor(-XXXXX) */
 
@@ -318,6 +328,7 @@ gboolean fritzbox_present(struct router_info *router_info)
 		g_warning("name, version, lang or serial not valid");
 	}
 
+	g_free(annex);
 	g_free(serial);
 	g_free(lang);
 	g_free(version);
@@ -844,9 +855,14 @@ gchar *fritzbox_get_ip(struct profile *profile)
 	gchar *ip = NULL;
 	gchar *request;
 	SoupMessageHeaders *headers;
+	gchar *url;
 
 	/* Create POST message */
-	gchar *url = g_strdup_printf("http://%s/upnp/control/WANIPConn1", router_get_host(profile));
+	if (FIRMWARE_IS(6, 6)) {
+		url = g_strdup_printf("http://%s/igdupnp/control/WANIPConn1", router_get_host(profile));
+	} else {
+		url = g_strdup_printf("http://%s/upnp/control/WANIPConn1", router_get_host(profile));
+	}
 
 	uri = soup_uri_new(url);
 	soup_uri_set_port(uri, 49000);
@@ -893,9 +909,14 @@ gboolean fritzbox_reconnect(struct profile *profile)
 	SoupURI *uri;
 	gchar *request;
 	SoupMessageHeaders *headers;
+	gchar *url;
 
 	/* Create POST message */
-	gchar *url = g_strdup_printf("http://%s:49000/upnp/control/WANIPConn1", router_get_host(profile));
+	if (FIRMWARE_IS(6, 6)) {
+		url = g_strdup_printf("http://%s:49000/igdupnp/control/WANIPConn1", router_get_host(profile));
+	} else {
+		url = g_strdup_printf("http://%s:49000/upnp/control/WANIPConn1", router_get_host(profile));
+	}
 
 	uri = soup_uri_new(url);
 	soup_uri_set_port(uri, 49000);

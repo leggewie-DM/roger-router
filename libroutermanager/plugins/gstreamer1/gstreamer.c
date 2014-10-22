@@ -198,7 +198,7 @@ static void *gstreamer_open(void)
 	gchar *output;
 	gchar *input;
 
-	pipes = g_malloc(sizeof(struct pipes));
+	pipes = g_slice_alloc(sizeof(struct pipes));
 	if (pipes == NULL) {
 		return NULL;
 	}
@@ -290,10 +290,9 @@ static gsize gstreamer_read(void *priv, guchar *data, gsize size)
 /**
  * \brief Stop and remove pipeline
  * \param priv private data
- * \param force force quit
  * \return error code
  */
-int gstreamer_close(void *priv, gboolean force)
+int gstreamer_close(void *priv)
 {
 	struct pipes *pipes = priv;
 
@@ -316,7 +315,7 @@ int gstreamer_close(void *priv, gboolean force)
 		pipes->out_pipe = NULL;
 	}
 
-	free(pipes);
+	g_slice_free(struct pipes, pipes);
 	pipes = NULL;
 
 	return 0;

@@ -55,6 +55,9 @@
 /* Have libnotify */
 #define HAVE_LIBNOTIFY 1
 
+/* Define to 1 if you have the `tiff' library (-ltiff). */
+#define HAVE_LIBTIFF 1
+
 /* Define to 1 if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
 
@@ -91,6 +94,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
+/* Define to 1 if you have the <tiffio.h> header file. */
+#define HAVE_TIFFIO_H 1
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
@@ -111,7 +117,7 @@
 #define PACKAGE_NAME "Roger Router"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Roger Router 1.8.7"
+#define PACKAGE_STRING "Roger Router 1.8.9"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "roger-router"
@@ -120,7 +126,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.8.7"
+#define PACKAGE_VERSION "1.8.9"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -135,4 +141,4 @@
 #define USE_PRINTER_SPOOLER 1
 
 /* Version number of package */
-#define VERSION "1.8.7"
+#define VERSION "1.8.9"

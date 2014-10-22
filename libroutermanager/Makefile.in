@@ -133,6 +133,7 @@ libroutermanager_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am__dirstamp = $(am__leading_dot)dirstamp
 am_libroutermanager_la_OBJECTS = libroutermanager_la-action.lo \
 	libroutermanager_la-address-book.lo \
 	libroutermanager_la-appobject-emit.lo \
@@ -150,13 +151,14 @@ am_libroutermanager_la_OBJECTS = libroutermanager_la-action.lo \
 	libroutermanager_la-net_monitor.lo \
 	libroutermanager_la-network.lo libroutermanager_la-osdep.lo \
 	libroutermanager_la-password.lo libroutermanager_la-plugins.lo \
-	libroutermanager_la-profile.lo libroutermanager_la-remote.lo \
-	libroutermanager_la-router.lo libroutermanager_la-voxplay.lo \
-	libroutermanager_la-xml.lo libroutermanager_la-fax.lo \
-	libroutermanager_la-faxophone.lo \
-	libroutermanager_la-isdn-convert.lo \
-	libroutermanager_la-phone.lo libroutermanager_la-ringtone.lo \
-	libroutermanager_la-sff.lo
+	libroutermanager_la-profile.lo libroutermanager_la-router.lo \
+	libroutermanager_la-voxplay.lo libroutermanager_la-xml.lo \
+	libfaxophone/libroutermanager_la-fax.lo \
+	libfaxophone/libroutermanager_la-faxophone.lo \
+	libfaxophone/libroutermanager_la-isdn-convert.lo \
+	libfaxophone/libroutermanager_la-phone.lo \
+	libfaxophone/libroutermanager_la-ringtone.lo \
+	libfaxophone/libroutermanager_la-sff.lo
 libroutermanager_la_OBJECTS = $(am_libroutermanager_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -536,18 +538,14 @@ libroutermanager_la_SOURCES = \
 	net_monitor.h\
 	network.c\
 	network.h\
-	number.h\
 	osdep.c\
 	osdep.h\
 	password.c\
 	password.h\
-	phone.h\
 	plugins.c\
 	plugins.h\
 	profile.c\
 	profile.h\
-	remote.c\
-	remote.h\
 	router.c\
 	router.h\
 	voxplay.c\
@@ -643,21 +641,36 @@ clean-libLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+libfaxophone/$(am__dirstamp):
+	@$(MKDIR_P) libfaxophone
+	@: > libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-fax.lo: libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-faxophone.lo:  \
+	libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-isdn-convert.lo:  \
+	libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-phone.lo:  \
+	libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-ringtone.lo:  \
+	libfaxophone/$(am__dirstamp)
+libfaxophone/libroutermanager_la-sff.lo: libfaxophone/$(am__dirstamp)
 
 libroutermanager.la: $(libroutermanager_la_OBJECTS) $(libroutermanager_la_DEPENDENCIES) $(EXTRA_libroutermanager_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libroutermanager_la_LINK) -rpath $(libdir) $(libroutermanager_la_OBJECTS) $(libroutermanager_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f libfaxophone/*.$(OBJEXT)
+	-rm -f libfaxophone/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
 
 .c.o:
-	$(AM_V_CC)$(COMPILE) -c $<
+	$(AM_V_CC)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-	$(AM_V_CC)$(COMPILE) -c `$(CYGPATH_W) '$<'`
+	$(AM_V_CC)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .c.lo:
 	$(AM_V_CC)$(LTCOMPILE) -c -o $@ $<
@@ -737,9 +750,6 @@ libroutermanager_la-plugins.lo: plugins.c
 libroutermanager_la-profile.lo: profile.c
 	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-profile.lo `test -f 'profile.c' || echo '$(srcdir)/'`profile.c
 
-libroutermanager_la-remote.lo: remote.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-remote.lo `test -f 'remote.c' || echo '$(srcdir)/'`remote.c
-
 libroutermanager_la-router.lo: router.c
 	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-router.lo `test -f 'router.c' || echo '$(srcdir)/'`router.c
 
@@ -749,29 +759,30 @@ libroutermanager_la-voxplay.lo: voxplay.c
 libroutermanager_la-xml.lo: xml.c
 	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-xml.lo `test -f 'xml.c' || echo '$(srcdir)/'`xml.c
 
-libroutermanager_la-fax.lo: libfaxophone/fax.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-fax.lo `test -f 'libfaxophone/fax.c' || echo '$(srcdir)/'`libfaxophone/fax.c
+libfaxophone/libroutermanager_la-fax.lo: libfaxophone/fax.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-fax.lo `test -f 'libfaxophone/fax.c' || echo '$(srcdir)/'`libfaxophone/fax.c
 
-libroutermanager_la-faxophone.lo: libfaxophone/faxophone.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-faxophone.lo `test -f 'libfaxophone/faxophone.c' || echo '$(srcdir)/'`libfaxophone/faxophone.c
+libfaxophone/libroutermanager_la-faxophone.lo: libfaxophone/faxophone.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-faxophone.lo `test -f 'libfaxophone/faxophone.c' || echo '$(srcdir)/'`libfaxophone/faxophone.c
 
-libroutermanager_la-isdn-convert.lo: libfaxophone/isdn-convert.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-isdn-convert.lo `test -f 'libfaxophone/isdn-convert.c' || echo '$(srcdir)/'`libfaxophone/isdn-convert.c
+libfaxophone/libroutermanager_la-isdn-convert.lo: libfaxophone/isdn-convert.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-isdn-convert.lo `test -f 'libfaxophone/isdn-convert.c' || echo '$(srcdir)/'`libfaxophone/isdn-convert.c
 
-libroutermanager_la-phone.lo: libfaxophone/phone.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-phone.lo `test -f 'libfaxophone/phone.c' || echo '$(srcdir)/'`libfaxophone/phone.c
+libfaxophone/libroutermanager_la-phone.lo: libfaxophone/phone.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-phone.lo `test -f 'libfaxophone/phone.c' || echo '$(srcdir)/'`libfaxophone/phone.c
 
-libroutermanager_la-ringtone.lo: libfaxophone/ringtone.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-ringtone.lo `test -f 'libfaxophone/ringtone.c' || echo '$(srcdir)/'`libfaxophone/ringtone.c
+libfaxophone/libroutermanager_la-ringtone.lo: libfaxophone/ringtone.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-ringtone.lo `test -f 'libfaxophone/ringtone.c' || echo '$(srcdir)/'`libfaxophone/ringtone.c
 
-libroutermanager_la-sff.lo: libfaxophone/sff.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libroutermanager_la-sff.lo `test -f 'libfaxophone/sff.c' || echo '$(srcdir)/'`libfaxophone/sff.c
+libfaxophone/libroutermanager_la-sff.lo: libfaxophone/sff.c
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroutermanager_la_CFLAGS) $(CFLAGS) -c -o libfaxophone/libroutermanager_la-sff.lo `test -f 'libfaxophone/sff.c' || echo '$(srcdir)/'`libfaxophone/sff.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf libfaxophone/.libs libfaxophone/_libs
 install-pcDATA: $(pc_DATA)
 	@$(NORMAL_INSTALL)
 	@list='$(pc_DATA)'; test -n "$(pcdir)" || list=; \
@@ -1025,6 +1036,7 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f libfaxophone/$(am__dirstamp)
 	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:

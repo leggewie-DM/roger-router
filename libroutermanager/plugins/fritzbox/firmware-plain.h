@@ -17,15 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef LIBROUTERMANAGER_PHONE_H
-#define LIBROUTERMANAGER_PHONE_H
+#ifndef FIRMWARE_PLAIN_H
+#define FIRMWARE_PLAIN_H
 
 G_BEGIN_DECLS
 
-struct phone {
-	gchar *name;
-	gchar *type;
-};
+gboolean fritzbox_present_plain(struct router_info *router_info);
 
 G_END_DECLS
 

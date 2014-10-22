@@ -513,6 +513,37 @@ void journal_print(GtkWidget *view_widget)
 	}
 }
 
+GdkPixbuf *load_tiff_page(TIFF *tiff_file)
+{
+	TIFFRGBAImage img;
+	gint row, col;
+	gint width, height;
+	uint32 *raster;
+
+	/* discover image height, width */
+	TIFFGetField(tiff_file, TIFFTAG_IMAGEWIDTH, &width);
+	TIFFGetField(tiff_file, TIFFTAG_IMAGELENGTH, &height);
+
+	/* allocate and fill raster from file. */
+	raster = (uint32*) _TIFFmalloc(width * height * sizeof(uint32));
+	TIFFRGBAImageBegin(&img, tiff_file, FALSE, NULL);
+	TIFFRGBAImageGet(&img, raster, width, height);
+	TIFFRGBAImageEnd(&img);
+
+	/* vertically flip the raster */
+	for (row = 0; row <= height / 2; row++) {
+		for (col = 0; col < width; col++) {
+			uint32 tmp;
+
+			tmp = raster[row * width + col];
+			raster[row * width + col] = raster[(height - row - 1) * width + col];
+			raster[(height - row - 1) * width + col] = tmp;
+		}
+	}
+
+	return gdk_pixbuf_new_from_data((const guchar *) raster, GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
+}
+
 /**
  * \brief Create fax report based on give information
  * \param status fax status structure
@@ -535,20 +566,27 @@ void create_fax_report(struct fax_status *status, const char *report_dir)
 	int pages = status->page_current;
 	int bitrate = status->bitrate;
 	struct profile *profile = profile_get_active();
+	TIFF *tiff;
 
 	if (file == NULL) {
-		g_warning("File is NULL\n");
+		g_warning("file is NULL\n");
 		return;
 	}
 
 	if (report_dir == NULL) {
-		g_warning("ReportDir is NULL\n");
+		g_warning("report_dir is NULL\n");
 		return;
 	}
 
+	tiff = TIFFOpen(file, "r");
+
+#if 1
+	pixbuf = load_tiff_page(tiff);
+#else
 	pixbuf = gdk_pixbuf_new_from_file(file, NULL);
+#endif
 	if (pixbuf == NULL) {
-		g_warning("PixBuf is null (file '%s')\n", file);
+		g_warning("pixbuf is null (file '%s')\n", file);
 		return;
 	}
 
@@ -563,12 +601,17 @@ void create_fax_report(struct fax_status *status, const char *report_dir)
 		pixbuf = scale;
 	}
 
-	buffer = g_strdup_printf("%s/fax-report_%s_%s-%02d_%02d_%d_%02d_%02d_%02d.pdf",
+	buffer = g_strdup_printf("%s/fax-report_%s_%s_%02d_%02d_%d_%02d_%02d_%02d.pdf",
 	                         report_dir, local, remote,
 	                         time_ptr->tm_mday, time_ptr->tm_mon + 1, time_ptr->tm_year + 1900,
 	                         time_ptr->tm_hour, time_ptr->tm_min, time_ptr->tm_sec);
 	out = cairo_pdf_surface_create(buffer, width, height + 200);
 	g_free(buffer);
+
+	if (!out) {
+		g_warning("Could not create pdf surface - is report directory writeable?\n");
+		return;
+	}
 
 	cairo = cairo_create(out);
 	gdk_cairo_set_source_pixbuf(cairo, pixbuf, 0, 200);
@@ -674,6 +717,26 @@ void create_fax_report(struct fax_status *status, const char *report_dir)
 	cairo_stroke(cairo);
 
 	cairo_show_page(cairo);
+
+	while (TIFFReadDirectory(tiff)) {
+		pixbuf = load_tiff_page(tiff);
+
+		width = gdk_pixbuf_get_width(pixbuf);
+		height = gdk_pixbuf_get_height(pixbuf);
+		if (width != 1728 || height != 2292) {
+			width = 1728;
+			height = 2292;
+			GdkPixbuf *scale = gdk_pixbuf_scale_simple(pixbuf, width, height, GDK_INTERP_BILINEAR);
+
+			g_object_unref(pixbuf);
+			pixbuf = scale;
+		}
+
+		gdk_cairo_set_source_pixbuf(cairo, pixbuf, 0, 0);
+
+		cairo_paint(cairo);
+		cairo_show_page(cairo);
+	}
 
 	cairo_destroy(cairo);
 

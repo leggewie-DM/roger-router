@@ -41,7 +41,7 @@ void log_save_data(gchar *name, const gchar *data, gsize len)
 		return;
 	}
 
-	file = g_build_filename(g_get_user_cache_dir(), name, NULL);
+	file = g_build_filename(g_get_user_cache_dir(), "routermanager", name, NULL);
 	file_save(file, data, len);
 
 	g_free(file);
@@ -92,9 +92,11 @@ static void log_func(const gchar *log_domain, GLogLevelFlags log_level, const gc
  */
 void log_init(gboolean debug)
 {
-	if (debug) {
-		g_log_set_default_handler(log_func, NULL);
+	if (!debug) {
+		return;
 	}
+
+	g_log_set_default_handler(log_func, NULL);
 }
 
 /**

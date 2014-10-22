@@ -515,10 +515,9 @@ unsigned long RoundUpToNextPowerOf2(unsigned long n)
 /**
  * \brief Stop and remove pipeline
  * \param priv private data
- * \param force force quit - unhandled
  * \return error code
  */
-int port_audio_close(void *priv, gboolean force)
+int port_audio_close(void *priv)
 {
 	struct port_private *private = priv;
 	//int bytesEmpty;
@@ -579,7 +578,7 @@ int port_audio_close(void *priv, gboolean force)
 	}
 #endif
 	g_debug("end");
-	free(private);
+	g_free(private);
 
 	return 0;
 }
@@ -590,7 +589,7 @@ int port_audio_close(void *priv, gboolean force)
  */
 static void *port_audio_open(void)
 {
-	struct port_private *private = malloc(sizeof(struct port_private));
+	struct port_private *private = g_malloc(sizeof(struct port_private));
 	PaStreamParameters output_parameters;
 	PaStreamParameters input_parameters;
 	PaError err;
@@ -681,7 +680,7 @@ static void *port_audio_open(void)
 	err = init_fifo(&private->echo_fifo, num_frames, private->bytes_per_frame);
 	if (err) {
 		g_debug("Could not init echo fifo");
-		port_audio_close(private, TRUE);
+		port_audio_close(private);
 
 		return NULL;
 	}
@@ -697,7 +696,7 @@ static void *port_audio_open(void)
 	err = init_fifo(&private->out_fifo, num_frames, private->bytes_per_frame);
 	if (err) {
 		g_debug("Could not init output fifo");
-		port_audio_close(private, TRUE);
+		port_audio_close(private);
 
 		return NULL;
 	}
@@ -707,7 +706,7 @@ static void *port_audio_open(void)
 		Pa_StartStream(private->out_stream);
 	} else {
 		g_warning("Sorry, could not open output stream (%s)", Pa_GetErrorText(err));
-		port_audio_close(private, TRUE);
+		port_audio_close(private);
 
 		return NULL;
 	}
@@ -740,7 +739,7 @@ static void *port_audio_open(void)
 	err = init_fifo(&private->in_fifo, num_frames, private->bytes_per_frame);
 	if (err) {
 		g_debug("Could not init input fifo");
-		port_audio_close(private, TRUE);
+		port_audio_close(private);
 
 		return NULL;
 	}
@@ -750,7 +749,7 @@ static void *port_audio_open(void)
 		Pa_StartStream(private->in_stream);
 	} else {
 		g_warning("Sorry, could not open input stream (%s)", Pa_GetErrorText(err));
-		port_audio_close(private, TRUE);
+		port_audio_close(private);
 
 		private = NULL;
 	}
