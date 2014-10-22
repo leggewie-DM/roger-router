@@ -77,13 +77,9 @@ void contacts_update_details(struct contact *contact)
 	gint detail_row = 1;
 
 	grid = gtk_grid_new();
+	gtk_widget_set_margin(grid, 20, 25, 20, 25);
 
 	if (contact) {
-		gtk_widget_set_margin_left(grid, 25);
-		gtk_widget_set_margin_top(grid, 25);
-		gtk_widget_set_margin_right(grid, 25);
-		gtk_widget_set_margin_bottom(grid, 25);
-
 		gtk_grid_set_row_spacing(GTK_GRID(grid), 15);
 		gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
 		detail_photo_image = gtk_image_new();
@@ -91,7 +87,7 @@ void contacts_update_details(struct contact *contact)
 
 		detail_name_label = gtk_label_new("");
 		gtk_label_set_ellipsize(GTK_LABEL(detail_name_label), PANGO_ELLIPSIZE_END);
-		gtk_misc_set_alignment(GTK_MISC(detail_name_label), 0, 0.5);
+		gtk_widget_set_halign(detail_name_label, GTK_ALIGN_START);
 		gtk_widget_set_hexpand(detail_name_label, TRUE);
 		gtk_grid_attach(GTK_GRID(grid), detail_name_label, 1, 0, 1, 1);
 
@@ -119,18 +115,23 @@ void contacts_update_details(struct contact *contact)
 			case PHONE_NUMBER_MOBILE:
 				type = ui_label_new(_("Mobile"));
 				break;
-			case PHONE_NUMBER_FAX:
-				type = ui_label_new(_("Fax"));
+			case PHONE_NUMBER_FAX_HOME:
+				type = ui_label_new(_("Private Fax"));
+				break;
+			case PHONE_NUMBER_FAX_WORK:
+				type = ui_label_new(_("Business Fax"));
+				break;
+			case PHONE_NUMBER_PAGER:
+				type = ui_label_new(_("Pager"));
 				break;
 			default:
 				type = ui_label_new(_("Unknown"));
 			}
 			number = gtk_label_new(phone_number->number);
 			gtk_label_set_selectable(GTK_LABEL(number), TRUE);
-			gtk_misc_set_alignment(GTK_MISC(number), 0, 0.5);
+			gtk_widget_set_halign(number, GTK_ALIGN_START);
 			dial = gtk_button_new();
 			gtk_widget_set_tooltip_text(dial, _("Dial number"));
-			//phone_image = gtk_image_new_from_icon_name("call-start-symbolic", GTK_ICON_SIZE_BUTTON);
 			phone_image = get_icon(APP_ICON_CALL, GTK_ICON_SIZE_BUTTON);
 			gtk_button_set_image(GTK_BUTTON(dial), phone_image);
 			gtk_button_set_relief(GTK_BUTTON(dial), GTK_RELIEF_NONE);
@@ -157,17 +158,20 @@ void contacts_update_details(struct contact *contact)
 			default:
 				type = ui_label_new(_("Other"));
 			}
+			gtk_widget_set_valign(type, GTK_ALIGN_START);
 			gtk_grid_attach(GTK_GRID(grid), type, 0, detail_row, 1, 1);
 
-			g_string_append_printf(addr_str, "%s\n", address->street);
+			g_string_append_printf(addr_str, "%s", address->street);
 			if (!EMPTY_STRING(address->zip)) {
-				g_string_append_printf(addr_str, "%s ", address->zip);
+				g_string_append_printf(addr_str, "\n%s %s", address->zip, address->city);
+			} else if (!EMPTY_STRING(address->city)) {
+				g_string_append_printf(addr_str, "%s", address->city);
 			}
-			g_string_append_printf(addr_str, "%s", address->city);
 
 			label = gtk_label_new(addr_str->str);
 			gtk_label_set_selectable(GTK_LABEL(label), TRUE);
-			gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+			gtk_widget_set_halign(label, GTK_ALIGN_START);
+			gtk_widget_set_valign(label, GTK_ALIGN_END);
 			gtk_grid_attach(GTK_GRID(grid), label, 1, detail_row, 1, 1);
 
 			g_string_free(addr_str, TRUE);
@@ -491,12 +495,9 @@ void contacts(void)
 
 	entry = gtk_entry_new();
 	g_signal_connect(G_OBJECT(entry), "icon-release", G_CALLBACK(entry_icon_released), NULL);
-	gtk_widget_set_margin_left(entry, 5);
-	gtk_widget_set_margin_top(entry, 5);
-	gtk_widget_set_margin_right(entry, 5);
-	gtk_widget_set_margin_bottom(entry, 5);
 	gtk_widget_set_vexpand(entry, FALSE);
 	gtk_entry_set_icon_from_icon_name(GTK_ENTRY(entry), GTK_ENTRY_ICON_PRIMARY, "edit-find-symbolic");
+	gtk_widget_set_margin(entry, 0, 5, 0, 5);
 	gtk_grid_attach(GTK_GRID(contacts_window_grid), entry, 0, 0, 1, 1);
 
 	scrolled = gtk_scrolled_window_new(NULL, NULL);
@@ -511,7 +512,6 @@ void contacts(void)
 
 	action_grid = gtk_grid_new();
 	button_add = gtk_button_new();
-	//image = gtk_image_new_from_icon_name("list-add-symbolic", GTK_ICON_SIZE_BUTTON);
 	image = get_icon(APP_ICON_ADD, GTK_ICON_SIZE_MENU);
 	gtk_button_set_image(GTK_BUTTON(button_add), image);
 	gtk_button_set_relief(GTK_BUTTON(button_add), GTK_RELIEF_NONE);
@@ -520,7 +520,6 @@ void contacts(void)
 	gtk_grid_attach(GTK_GRID(action_grid), button_add, 0, 0, 1, 1);
 
 	button_remove = gtk_button_new();
-	//image = gtk_image_new_from_icon_name("list-remove-symbolic", GTK_ICON_SIZE_BUTTON);
 	image = get_icon(APP_ICON_REMOVE, GTK_ICON_SIZE_MENU);
 	gtk_button_set_image(GTK_BUTTON(button_remove), image);
 	gtk_button_set_relief(GTK_BUTTON(button_remove), GTK_RELIEF_NONE);
@@ -529,7 +528,6 @@ void contacts(void)
 	gtk_grid_attach(GTK_GRID(action_grid), button_remove, 1, 0, 1, 1);
 
 	button_edit = gtk_button_new();
-	//image = gtk_image_new_from_icon_name("document-properties-symbolic", GTK_ICON_SIZE_BUTTON);
 	image = get_icon(APP_ICON_EDIT, GTK_ICON_SIZE_MENU);
 	gtk_button_set_image(GTK_BUTTON(button_edit), image);
 	gtk_button_set_relief(GTK_BUTTON(button_edit), GTK_RELIEF_NONE);
@@ -539,7 +537,6 @@ void contacts(void)
 
 
 	button_reload = gtk_button_new();
-	//image = gtk_image_new_from_icon_name("view-refresh-symbolic", GTK_ICON_SIZE_BUTTON);
 	image = get_icon(APP_ICON_REFRESH, GTK_ICON_SIZE_MENU);
 	gtk_button_set_image(GTK_BUTTON(button_reload), image);
 	gtk_button_set_relief(GTK_BUTTON(button_reload), GTK_RELIEF_NONE);

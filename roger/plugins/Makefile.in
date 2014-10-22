@@ -81,6 +81,8 @@ host_triplet = @host@
 @WITH_LIBNOTIFY_TRUE@am__append_2 = notification
 @WITH_APPINDICATOR3_TRUE@am__append_3 = indicator
 @WITH_GDATA_TRUE@am__append_4 = google
+@WITH_KWALLET_TRUE@am__append_5 = kwallet
+@WITH_MACOS_KEYCHAIN_TRUE@am__append_6 = keychain
 subdir = roger/plugins
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -149,7 +151,7 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = statusicon fritzfon gtknotify vcard thunderbird \
-	evolution notification indicator google
+	evolution notification indicator google kwallet keychain
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -199,6 +201,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CUPS_CFLAGS = @CUPS_CFLAGS@
 CUPS_LIBS = @CUPS_LIBS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
@@ -230,8 +236,6 @@ GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
-GSTREAMER0_CFLAGS = @GSTREAMER0_CFLAGS@
-GSTREAMER0_LIBS = @GSTREAMER0_LIBS@
 GSTREAMER1_CFLAGS = @GSTREAMER1_CFLAGS@
 GSTREAMER1_LIBS = @GSTREAMER1_LIBS@
 GTK_CFLAGS = @GTK_CFLAGS@
@@ -253,6 +257,8 @@ INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL_XGETTEXT = @INTLTOOL_XGETTEXT@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
+KWALLET_CFLAGS = @KWALLET_CFLAGS@
+KWALLET_LIBS = @KWALLET_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBNOTIFY_CFLAGS = @LIBNOTIFY_CFLAGS@
@@ -325,6 +331,7 @@ abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -378,7 +385,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = statusicon fritzfon gtknotify vcard thunderbird \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+	$(am__append_4) $(am__append_5) $(am__append_6)
 plugindir = ${libdir}/roger/
 all: all-recursive
 

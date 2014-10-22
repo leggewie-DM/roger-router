@@ -122,7 +122,7 @@ gboolean fax_update_ui(gpointer user_data)
 		switch (fax_status->phase) {
 		case PHASE_B:
 			g_debug("PHASE_B");
-			tmp = g_convert_utf8(fax_status->remote_ident);
+			tmp = g_convert_utf8(fax_status->remote_ident, -1);
 			g_debug("Ident: %s", tmp);
 			gtk_label_set_text(GTK_LABEL(remote_label), tmp);
 			g_free(tmp);
@@ -294,9 +294,8 @@ void app_show_fax_window(gchar *fax_file)
 
 	gtk_container_add(GTK_CONTAINER(frame), frame_grid);
 
-	state->phone_statusbar = gtk_statusbar_new();
-	gtk_statusbar_push(GTK_STATUSBAR(state->phone_statusbar), 0, _("Connection: Idle | Duration: 00:00:00"));
-	gtk_grid_attach(GTK_GRID(grid), state->phone_statusbar, 0, 2, 3, 1);
+	state->phone_status_label = gtk_label_new(_("Connection: Idle | Duration: 00:00:00"));
+	gtk_grid_attach(GTK_GRID(grid), state->phone_status_label, 0, 2, 3, 1);
 
 	/* We set the dial frame last, so that all other widgets are in place */
 	frame = phone_dial_frame(window, NULL, state);
@@ -321,6 +320,7 @@ void app_show_fax_window(gchar *fax_file)
 	g_signal_connect(app_object, "connection-terminated", G_CALLBACK(capi_connection_terminated_cb), state);
 
 	gtk_widget_show_all(window);
+	gtk_window_set_keep_above(GTK_WINDOW(window), TRUE);
 }
 
 gboolean app_show_fax_window_idle(gpointer data)

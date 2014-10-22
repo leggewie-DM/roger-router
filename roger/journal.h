@@ -42,12 +42,12 @@ GtkWidget *journal_window(GApplication *app, GFile *file);
 void journal_set_visible(gboolean state);
 GdkPixbuf *journal_get_call_icon(gint type);
 
-void journal_add_call(struct call *call);
 void journal_update_filter(void);
 void journal_quit(void);
 
 void journal_set_hide_on_quit(gboolean hide);
 void journal_set_hide_on_start(gboolean hide);
+GSList *journal_get_list(void);
 
 GtkWidget *journal_get_window(void);
 

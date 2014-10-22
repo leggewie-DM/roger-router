@@ -34,14 +34,14 @@
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #define HAVE_GETTEXT 1
 
-/* Have gstreamer 0.10 */
-/* #undef HAVE_GSTREAMER0 */
-
 /* Have gstreamer 1.0 */
 /* #undef HAVE_GSTREAMER1 */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
+
+/* Have kwallet */
+/* #undef HAVE_KWALLET */
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #define HAVE_LC_MESSAGES 1
@@ -111,7 +111,7 @@
 #define PACKAGE_NAME "Roger Router"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Roger Router 1.8.4"
+#define PACKAGE_STRING "Roger Router 1.8.7"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "roger-router"
@@ -120,13 +120,13 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.8.4"
+#define PACKAGE_VERSION "1.8.7"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Use headerbar */
-#define USE_HEADERBAR 1
+/* #undef USE_HEADERBAR */
 
 /* Use printer server on port 9100 */
 /* #undef USE_PRINTER_SERVER */
@@ -135,4 +135,4 @@
 #define USE_PRINTER_SPOOLER 1
 
 /* Version number of package */
-#define VERSION "1.8.4"
+#define VERSION "1.8.7"

@@ -110,7 +110,7 @@ if [ $# -eq 1 ]; then
 			mingw32-icu mingw32-expat mingw32-jasper mingw32-filesystem mingw32-libffi mingw32-fontconfig mingw32-libjpeg-turbo \
 			mingw32-freetype mingw32-libpng mingw-binutils-generic mingw32-gcc-c++ mingw32-libxml2 mingw-filesystem-base \
 			mingw32-gcc mingw32-pango mingw32-gdk-pixbuf mingw32-pixman mingw32-libsoup mingw32-dlfcn mingw32-libtiff mingw32-pthreads \
-			mingw32-nsis flex bison python-devel wine wget
+			mingw32-nsis flex bison python-devel wine wget gcc patch autoconf automake intltool libtool glib2-devel
 	fi
 fi
 
@@ -124,7 +124,7 @@ cd packages
 make_pkg "http://ftp.gnome.org/pub/GNOME/sources/libcroco/0.6/" "libcroco-0.6.8.tar.xz" "libcroco-0.6.8"
 
 # Download and compile librsvg (requires libcroco)
-make_pkg "http://ftp.gnome.org/pub/GNOME/sources/librsvg/2.40/" "librsvg-2.40.1.tar.xz" "librsvg-2.40.1"
+#make_pkg "http://ftp.gnome.org/pub/GNOME/sources/librsvg/2.40/" "librsvg-2.40.1.tar.xz" "librsvg-2.40.1"
 
 # Download and compile libogg
 make_pkg "http://downloads.xiph.org/releases/ogg/" "libogg-1.3.1.tar.xz" "libogg-1.3.1"

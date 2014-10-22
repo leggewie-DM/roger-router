@@ -33,14 +33,14 @@
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
-/* Have gstreamer 0.10 */
-#undef HAVE_GSTREAMER0
-
 /* Have gstreamer 1.0 */
 #undef HAVE_GSTREAMER1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Have kwallet */
+#undef HAVE_KWALLET
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #undef HAVE_LC_MESSAGES

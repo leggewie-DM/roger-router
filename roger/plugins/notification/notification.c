@@ -111,6 +111,36 @@ static gboolean notification_close(gpointer window)
 	return FALSE;
 }
 
+gboolean notification_update(gpointer data) {
+	struct contact *contact = data;
+	struct connection *connection;
+
+	g_assert(contact != NULL);
+	g_assert(contact->priv != NULL);
+
+	connection = contact->priv;
+
+	if (connection->notification && !EMPTY_STRING(contact->name)) {
+		gchar *text;
+
+		text = g_markup_printf_escaped(_("Name:\t%s\nNumber:\t%s\nCompany:\t%s\nStreet:\t%s\nCity:\t\t%s%s%s"),
+		                               contact->name,
+		                               contact->number,
+		                               "",
+		                               contact->street,
+		                               contact->zip,
+		                               contact->zip ? " " : "",
+		                               contact->city);
+
+		notify_notification_update(connection->notification, connection->type == CALL_TYPE_INCOMING ? _("Incoming call") : _("Outgoing call"), text, "dialog-information");
+
+		notify_notification_show(connection->notification, NULL);
+		g_free(text);
+	}
+
+	return FALSE;
+}
+
 /**
  * \brief Reverse lookup of connection data and notification redraw
  * \param data connection pointer
@@ -119,33 +149,16 @@ static gboolean notification_close(gpointer window)
 static gpointer notification_reverse_lookup_thread(gpointer data)
 {
 	struct connection *connection = data;
-	gchar *name;
-	gchar *address;
-	gchar *zip;
-	gchar *city;
-	gchar *number;
+	struct contact *contact;
 
-	number = connection->remote_number;
+	contact = g_slice_new0(struct contact);
 
-	if (routermanager_lookup(number, &name, &address, &zip, &city)) {
-		if (connection->notification) {
-			gchar *text;
+	contact->number = g_strdup(connection->remote_number);
+	contact->priv = data;
 
-			text = g_markup_printf_escaped(_("Name:\t%s\nNumber:\t%s\nCompany:\t%s\nStreet:\t%s\nCity:\t\t%s%s%s"),
-			                               name ? name : "",
-			                               number ? number : "",
-			                               "",
-			                               address ? address : "",
-			                               zip ? zip : "",
-			                               zip ? " " : "",
-			                               city ? city : "");
+	routermanager_lookup(contact->number, &contact->name, &contact->street, &contact->zip, &contact->city);
 
-			notify_notification_update(connection->notification, connection->type == CALL_TYPE_INCOMING ? _("Incoming call") : _("Outgoing call"), text, "dialog-information");
-
-			notify_notification_show(connection->notification, NULL);
-			g_free(text);
-		}
-	}
+	g_idle_add(notification_update, contact);
 	g_debug("done");
 
 	return NULL;
@@ -255,8 +268,10 @@ void notifications_connection_notify_cb(AppObject *obj, struct connection *conne
 		notify_notification_add_action(notify, "accept", _("Accept"), notify_accept_clicked_cb, connection, NULL);
 		notify_notification_add_action(notify, "deny", _("Decline"), notify_deny_clicked_cb, connection, NULL);
 	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
+		gint duration = g_settings_get_int(notification_settings, "duration");
+
 		notify = notify_notification_new(_("Outgoing call"), text, "notification-message-roger-out.svg");
-		g_timeout_add_seconds(5, notification_close, notify);
+		g_timeout_add_seconds(duration, notification_close, notify);
 	} else {
 		g_warning("Unhandled case in connection notify - notification!");
 		g_free(text);
@@ -458,14 +473,19 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *enable_column;
 	GtkTreeViewColumn *number_column;
-	GtkWidget *play_ringtones_toggle;
+	GtkWidget *play_ringtones_label;
+	GtkWidget *play_ringtones_switch;
+	GtkWidget *duration_label;
+	GtkWidget *duration_spinbutton;
+	GtkWidget *popup_grid;
+	GtkAdjustment *adjustment;
 
 	/* Settings grid */
 	settings_grid = gtk_grid_new();
 
 	/* Scrolled window */
 	scroll_window = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll_window), 380);
+	gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll_window), 200);
 	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll_window), GTK_SHADOW_IN);
 	gtk_widget_set_vexpand(scroll_window, TRUE);
 
@@ -475,7 +495,6 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	gtk_widget_set_hexpand(view, TRUE);
 	gtk_widget_set_vexpand(view, TRUE);
 	gtk_container_add(GTK_CONTAINER(scroll_window), view);
-	gtk_grid_attach(GTK_GRID(settings_grid), scroll_window, 0, 0, 1, 1);
 
 	list_store = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_BOOLEAN);
 
@@ -498,10 +517,32 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	enable_column = gtk_tree_view_column_new_with_attributes(_("Incoming"), renderer, "active", 2, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), enable_column);
 	g_signal_connect(G_OBJECT(renderer), "toggled", G_CALLBACK(notification_incoming_toggle_cb), tree_model);
+	gtk_grid_attach(GTK_GRID(settings_grid), pref_group_create(scroll_window, _("Choose for which MSNs you want notifications"), TRUE, TRUE), 0, 0, 1, 1);
 
-	play_ringtones_toggle = gtk_check_button_new_with_label(_("Play ringtones"));
-	g_settings_bind(notification_settings, "play-ringtones", play_ringtones_toggle, "active", G_SETTINGS_BIND_DEFAULT);
-	gtk_grid_attach(GTK_GRID(settings_grid), play_ringtones_toggle, 0, 1, 1, 1);
+	popup_grid = gtk_grid_new();
 
-	return pref_group_create(settings_grid, _("Choose for which MSNs you want notifications:"), TRUE, TRUE);
+	/* Set standard spacing to 5 */
+	gtk_grid_set_row_spacing(GTK_GRID(popup_grid), 5);
+	gtk_grid_set_column_spacing(GTK_GRID(popup_grid), 15);
+
+	duration_label = ui_label_new(_("Duration (outgoing)"));
+	gtk_grid_attach(GTK_GRID(popup_grid), duration_label, 0, 0, 1, 1);
+
+	adjustment = gtk_adjustment_new(0, 1, 60, 1, 10, 0);
+	duration_spinbutton = gtk_spin_button_new(adjustment, 1, 0);
+	gtk_widget_set_hexpand(duration_spinbutton, TRUE);
+	g_settings_bind(notification_settings, "duration", duration_spinbutton, "value", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach(GTK_GRID(popup_grid), duration_spinbutton, 1, 0, 1, 1);
+
+	play_ringtones_label = ui_label_new(_("Play ringtones"));
+	gtk_grid_attach(GTK_GRID(popup_grid), play_ringtones_label, 0, 2, 1, 1);
+
+	play_ringtones_switch = gtk_switch_new();
+	gtk_widget_set_halign(play_ringtones_switch, GTK_ALIGN_START);
+	g_settings_bind(notification_settings, "play-ringtones", play_ringtones_switch, "active", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach(GTK_GRID(popup_grid), play_ringtones_switch, 1, 2, 1, 1);
+
+	gtk_grid_attach(GTK_GRID(settings_grid), pref_group_create(popup_grid, _("Popup"), TRUE, TRUE), 0, 1, 1, 1);
+
+	return settings_grid;
 }

@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce configure.
 
 m4_define([roger_major], [1])
 m4_define([roger_minor], [8])
-m4_define([roger_micro], [4])
+m4_define([roger_micro], [7])
 
 m4_define([roger_version],[roger_major.roger_minor.roger_micro])
 
@@ -17,6 +17,7 @@ AC_CONFIG_MACRO_DIR(m4)
 
 # Check for compilers.
 AC_PROG_CC
+AC_PROG_CXX
 AC_CHECK_PROG(found_cc, "$CC", yes, no)
 AM_PROG_CC_C_O
 
@@ -150,7 +151,7 @@ case "$with_fax_spooler_type" in
 esac
 
 AC_ARG_WITH([headerbar],
-	[AS_HELP_STRING([--headerbar=@<:@ARG@:>@],
+	[AS_HELP_STRING([--with-headerbar=@<:@ARG@:>@],
 		[whether journal shoudl make use of GtkHeaderBar (possible values: no, yes) @<:@default=no@:>@])],
 	[],
 	[with_headerbar=no])
@@ -305,6 +306,67 @@ AM_CONDITIONAL(WITH_SECRET, test "x$with_secret" != "xno")
 AM_CONDITIONAL(HAVE_SECRET_SOURCE_REGISTRY, test "x$with_secret_registry" = "xyes")
 
 dnl ********************************************************************
+dnl MacOS keyChain is optional
+dnl ********************************************************************
+AC_ARG_WITH([macos-keychain],
+	[AS_HELP_STRING([--with-macos-keychain=@<:@ARG@:>@], 
+	[Use macos-keychain (possible values: no, yes, check) @<:@default=check@:>@])],
+	[],
+	[with_macos_keychain=check])
+
+AC_MSG_CHECKING(for MacOS-keyring)
+
+if test "$with_macos_keychain" = "check"; then
+AC_CACHE_CHECK([for SecKeychainGetVersion], 
+    ac_cv_func_SecKeychainGetVersion, 
+    [ac_save_LIBS="$LIBS" 
+    LIBS="$LIBS -Wl,-framework -Wl,Security" 
+    AC_TRY_LINK([#include <Security/Security.h>], 
+        [SecKeychainGetVersion(NULL);], 
+        [ac_cv_func_SecKeychainGetVersion=yes], 
+        [ac_cv_func_SecKeychainGetVersion=no]) 
+    LIBS="$ac_save_LIBS"]) 
+if test $ac_cv_func_SecKeychainGetVersion = yes; then 
+    with_macos_keychain=yes
+    OS_LIBS="$OS_LIBS -Wl,-framework -Wl,Security"
+else
+    with_macos_keychain=no 
+fi 
+fi
+
+if test "x$with_macos_keychain" != "xno"; then
+	ROGER_FEATURES_YES="\tmacos-keyring\n$ROGER_FEATURES_YES"
+	with_macos_keychain=yes
+else
+	ROGER_FEATURES_NO="\tmacos-keyring\n$ROGER_FEATURES_NO"
+fi
+
+AC_MSG_RESULT($with_macos_keychain)
+
+AM_CONDITIONAL(WITH_MACOS_KEYCHAIN, test "x$with_macos_keychain" != "xno")
+
+dnl ********************************************************************
+dnl kwallet is optional
+dnl ********************************************************************
+AC_ARG_WITH([kwallet],
+	[AS_HELP_STRING([--with-kwallet=@<:@ARG@:>@],
+	[Use kwallet (possible values: no, yes or the path to kwallet) @<:@default=no@:>@])],
+	[],
+	[with_kwallet=no])
+
+AC_MSG_CHECKING(for kwallet)
+AS_IF([test "x$with_kwallet" != xno],
+	[AC_SUBST([KWALLET_CFLAGS], ["`pkg-config --cflags-only-I QtCore QtDBus QtGui` -I`kde4-config --path include`"])
+	AC_SUBST([KWALLET_LIBS], ["-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui -L`kde4-config --path lib` -L/usr/lib/kde4/devel -L/usr/lib64/kde4/devel"])
+	AC_DEFINE([HAVE_KWALLET], 1, [Have kwallet])
+	ROGER_FEATURES_YES="\tkwallet\n$ROGER_FEATURES_YES"
+])
+AC_MSG_RESULT($with_kwallet)
+
+AM_CONDITIONAL(WITH_KWALLET, test "x$with_kwallet" != "xno")
+
+
+dnl ********************************************************************
 dnl gdata is optional
 dnl ********************************************************************
 AC_ARG_WITH([gdata],
@@ -372,39 +434,6 @@ AS_IF([test "x$with_ebook" != xno],
 	fi
 ])
 AM_CONDITIONAL(HAVE_EBOOK_SOURCE_REGISTRY, test "x$with_ebook_registry" = "xyes")
-
-
-dnl ********************************************************************
-dnl gstreamer-0.10 is optional
-dnl ********************************************************************
-AC_ARG_WITH([gstreamer0],
-	[AS_HELP_STRING([--with-gstreamer0=@<:@ARG@:>@],
-	[Use gstreamer-0.10 (possible values: no, yes, check, or the path to gstreamer) @<:@default=check@:>@])],
-	[],
-	[with_gstreamer0=no])
-
-AC_MSG_CHECKING(for gstreamer-0.10 and gstreamer-app-0.10)
-AS_IF([test "x$with_gstreamer0" != xno],
-	[if test "x$with_gstreamer0" = xcheck; then
-		pkg-config --exists gstreamer-0.10 && pkg-config --exists gstreamer-app-0.10 && with_gstreamer0=yes
-	elif test "x$with_gstreamer0" = xyes; then
-		( pkg-config --exists gstreamer-0.10 && pkg-config --exists gstreamer-app-0.10 gstreamer-interfaces-0.10 ) || AC_MSG_FAILURE(
-			[--with-gstreamer-0.10=yes was given, but test for gstreamer-0.10 and gstreamer-app-0.10 failed])
-	fi
-	if test "x$with_gstreamer0" = xyes; then
-		AC_SUBST([GSTREAMER0_CFLAGS], ["`pkg-config --cflags gstreamer-0.10 gstreamer-app-0.10 gstreamer-interfaces-0.10`"])
-		AC_SUBST([GSTREAMER0_LIBS], ["`pkg-config --libs gstreamer-0.10 gstreamer-app-0.10 gstreamer-interfaces-0.10`"])
-		AC_DEFINE([HAVE_GSTREAMER0], 1, [Have gstreamer 0.10])
-		ROGER_FEATURES_YES="\tgstreamer 0.10\n$ROGER_FEATURES_YES"
-	else
-		with_gstreamer0=no
-		ROGER_FEATURES_NO="\tgstreamer 0.10\n$ROGER_FEATURES_NO"
-	fi
-])
-
-AC_MSG_RESULT($with_gstreamer0)
-
-AM_CONDITIONAL(WITH_GSTREAMER0, test "x$with_gstreamer0" != "xno")
 
 dnl ********************************************************************
 dnl gstreamer-1.x is optional
@@ -615,7 +644,6 @@ AC_CONFIG_FILES([
     libroutermanager/plugins/reverselookup/Makefile
     libroutermanager/plugins/wincred/Makefile
     libroutermanager/plugins/portaudio/Makefile
-    libroutermanager/plugins/gstreamer/Makefile
     libroutermanager/plugins/gstreamer1/Makefile
     libroutermanager/plugins/secret/Makefile
     roger/Makefile
@@ -641,6 +669,8 @@ AC_CONFIG_FILES([
     roger/plugins/google/data/Makefile
     roger/plugins/thunderbird/Makefile
     roger/plugins/thunderbird/data/Makefile
+    roger/plugins/kwallet/Makefile
+    roger/plugins/keychain/Makefile
     cups-backend/Makefile
     macosx/roger.plist
     macosx/package

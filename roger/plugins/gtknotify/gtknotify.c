@@ -152,7 +152,6 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 {
 	GtkWidget *notify = NULL;
 	GtkWidget *main_frame;
-	GtkWidget *frame;
 	GtkWidget *main_grid;
 	GtkWidget *contact_grid;
 	GtkWidget *phone_grid;
@@ -177,6 +176,7 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 	gboolean found = FALSE;
 	gint width, height;
 	gint line = 0;
+	gint position = 0;
 
 	/* Get notification numbers */
 	if (connection->type & CONNECTION_TYPE_OUTGOING) {
@@ -243,10 +243,9 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 
 	main_frame = gtk_frame_new(NULL);
 
-	frame = gtk_alignment_new(0.5, 0.5, 1, 1);
-	gtk_alignment_set_padding(GTK_ALIGNMENT(frame), 10, 10, 10, 10);
-
 	main_grid = gtk_grid_new();
+	gtk_widget_set_margin(main_grid, 10, 10, 10, 10);
+
 	/* Set standard spacing to 5 */
 	gtk_grid_set_row_spacing(GTK_GRID(main_grid), 15);
 	gtk_grid_set_column_spacing(GTK_GRID(main_grid), 15);
@@ -275,57 +274,56 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 	/* Name */
 	line++;
 	direction_label = gtk_label_new(_("Name:"));
-	gtk_misc_set_alignment(GTK_MISC(direction_label), 0, 0.5);
+	gtk_widget_set_halign(direction_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), direction_label, 1, line, 1, 1);
 
 	contact_name_label = gtk_label_new("");
-	gtk_misc_set_alignment(GTK_MISC(contact_name_label), 0, 0.5);
+	gtk_widget_set_halign(contact_name_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), contact_name_label, 2, line, 1, 1);
 
 	/* Number */
 	line++;
 	number_label = gtk_label_new(_("Number:"));
-	gtk_misc_set_alignment(GTK_MISC(number_label), 0, 0.5);
+	gtk_widget_set_halign(number_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), number_label, 1, line, 1, 1);
 
 	contact_number_label = gtk_label_new("");
-	gtk_misc_set_alignment(GTK_MISC(contact_number_label), 0, 0.5);
+	gtk_widget_set_halign(contact_number_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), contact_number_label, 2, line, 1, 1);
 
 	/* Company */
 	line++;
 	company_label = gtk_label_new(_("Company:"));
-	gtk_misc_set_alignment(GTK_MISC(company_label), 0, 0.5);
+	gtk_widget_set_halign(company_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), company_label, 1, line, 1, 1);
 
 	contact_company_label = gtk_label_new("");
-	gtk_misc_set_alignment(GTK_MISC(contact_company_label), 0, 0.5);
+	gtk_widget_set_halign(contact_company_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), contact_company_label, 2, line, 1, 1);
 
 	/* Street */
 	line++;
 	street_label = gtk_label_new(_("Street:"));
-	gtk_misc_set_alignment(GTK_MISC(street_label), 0, 0.5);
+	gtk_widget_set_halign(street_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), street_label, 1, line, 1, 1);
 
 	contact_street_label = gtk_label_new("");
-	gtk_misc_set_alignment(GTK_MISC(contact_street_label), 0, 0.5);
+	gtk_widget_set_halign(contact_street_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), contact_street_label, 2, line, 1, 1);
 
 	/* City */
 	line++;
 	city_label = gtk_label_new(_("City:"));
-	gtk_misc_set_alignment(GTK_MISC(city_label), 0, 0.5);
+	gtk_widget_set_halign(city_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), city_label, 1, line, 1, 1);
 
 	contact_city_label = gtk_label_new("");
-	gtk_misc_set_alignment(GTK_MISC(contact_city_label), 0, 0.5);
+	gtk_widget_set_halign(contact_city_label, GTK_ALIGN_START);
 	gtk_grid_attach(GTK_GRID(contact_grid), contact_city_label, 2, line, 1, 1);
 
 	gtk_grid_attach(GTK_GRID(main_grid), contact_grid, 0, 0, 1, 1);
 
-	gtk_container_add(GTK_CONTAINER(frame), main_grid);
-	gtk_container_add(GTK_CONTAINER(main_frame), frame);
+	gtk_container_add(GTK_CONTAINER(main_frame), main_grid);
 	gtk_container_add(GTK_CONTAINER(notify), main_frame);
 
 	tmp = connection->local_number ? g_strdup_printf(_("(on %s)"), connection->local_number) : g_strdup(_("(on ?)"));
@@ -373,10 +371,12 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 
 		gtk_grid_attach(GTK_GRID(main_grid), phone_grid, 0, 1, 1, 1);
 	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
+		gint duration = g_settings_get_int(notification_gtk_settings, "duration");
 		tmp = ui_bold_text(_("Outgoing call"));
 		gtk_label_set_markup(GTK_LABEL(type_label), tmp);
 		g_free(tmp);
-		g_timeout_add_seconds(5, notification_gtk_close, notify);
+
+		g_timeout_add_seconds(duration, notification_gtk_close, notify);
 	}
 
 	gtk_window_set_decorated(GTK_WINDOW(notify), FALSE);
@@ -384,7 +384,25 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 
 	gtk_window_get_size(GTK_WINDOW(notify), &width, &height);
 
-	gtk_window_move(GTK_WINDOW(notify), gdk_screen_width() - width, gdk_screen_height() - height);
+	position = g_settings_get_int(notification_gtk_settings, "position");
+	switch (position) {
+	case 0:
+		/* Top Left */
+		gtk_window_move(GTK_WINDOW(notify), 0, 0);
+		break;
+	case 1:
+		/* Top Right */
+		gtk_window_move(GTK_WINDOW(notify), gdk_screen_width() - width, 0);
+		break;
+	case 2:
+		/* Bottom Left */
+		gtk_window_move(GTK_WINDOW(notify), 0, gdk_screen_height() - height);
+		break;
+	case 3:
+		/* Bottom Right */
+		gtk_window_move(GTK_WINDOW(notify), gdk_screen_width() - width, gdk_screen_height() - height);
+		break;
+	}
 
 	gtk_window_stick(GTK_WINDOW(notify));
 	gtk_window_set_keep_above(GTK_WINDOW(notify), TRUE);
@@ -405,7 +423,7 @@ void impl_activate(PeasActivatable *plugin)
 {
 	RouterManagerNotificationGtkPlugin *notify_plugin = ROUTERMANAGER_NOTIFICATION_GTK_PLUGIN(plugin);
 
-	notification_gtk_settings = g_settings_new("org.tabos.roger.plugins.notification-gtk");
+	notification_gtk_settings = g_settings_new("org.tabos.roger.plugins.gtknotify");
 
 	gchar **incoming_numbers = g_settings_get_strv(notification_gtk_settings, "incoming-numbers");
 	gchar **outgoing_numbers = g_settings_get_strv(notification_gtk_settings, "outgoing-numbers");
@@ -565,14 +583,21 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *enable_column;
 	GtkTreeViewColumn *number_column;
-	GtkWidget *play_ringtones_toggle;
+	GtkWidget *position_label;
+	GtkWidget *position_combobox;
+	GtkWidget *play_ringtones_label;
+	GtkWidget *play_ringtones_switch;
+	GtkWidget *popup_grid;
+	GtkWidget *duration_label;
+	GtkWidget *duration_spinbutton;
+	GtkAdjustment *adjustment;
 
 	/* Settings grid */
 	settings_grid = gtk_grid_new();
 
 	/* Scrolled window */
 	scroll_window = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll_window), 380);
+	gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll_window), 200);
 	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll_window), GTK_SHADOW_IN);
 	gtk_widget_set_vexpand(scroll_window, TRUE);
 
@@ -582,7 +607,6 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	gtk_widget_set_hexpand(view, TRUE);
 	gtk_widget_set_vexpand(view, TRUE);
 	gtk_container_add(GTK_CONTAINER(scroll_window), view);
-	gtk_grid_attach(GTK_GRID(settings_grid), scroll_window, 0, 0, 1, 1);
 
 	list_store = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_BOOLEAN);
 
@@ -606,9 +630,43 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), enable_column);
 	g_signal_connect(G_OBJECT(renderer), "toggled", G_CALLBACK(notification_gtk_incoming_toggle_cb), tree_model);
 
-	play_ringtones_toggle = gtk_check_button_new_with_label(_("Play ringtones"));
-	g_settings_bind(notification_gtk_settings, "play-ringtones", play_ringtones_toggle, "active", G_SETTINGS_BIND_DEFAULT);
-	gtk_grid_attach(GTK_GRID(settings_grid), play_ringtones_toggle, 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(settings_grid), pref_group_create(scroll_window, _("Choose for which MSNs you want notifications"), TRUE, TRUE), 0, 0, 1, 1);
 
-	return pref_group_create(settings_grid, _("Choose for which MSNs you want notifications"), TRUE, TRUE);
+	popup_grid = gtk_grid_new();
+
+	/* Set standard spacing to 5 */
+	gtk_grid_set_row_spacing(GTK_GRID(popup_grid), 5);
+	gtk_grid_set_column_spacing(GTK_GRID(popup_grid), 15);
+
+	position_label = ui_label_new(_("Position"));
+	gtk_grid_attach(GTK_GRID(popup_grid), position_label, 0, 0, 1, 1);
+
+	position_combobox = gtk_combo_box_text_new();
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(position_combobox), _("Top left"));
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(position_combobox), _("Top right"));
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(position_combobox), _("Bottom left"));
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(position_combobox), _("Bottom right"));
+	g_settings_bind(notification_gtk_settings, "position", position_combobox, "active", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach(GTK_GRID(popup_grid), position_combobox, 1, 0, 1, 1);
+
+	duration_label = ui_label_new(_("Duration (outgoing)"));
+	gtk_grid_attach(GTK_GRID(popup_grid), duration_label, 0, 1, 1, 1);
+
+	adjustment = gtk_adjustment_new(0, 1, 60, 1, 10, 0);
+	duration_spinbutton = gtk_spin_button_new(adjustment, 1, 0);
+	gtk_widget_set_hexpand(duration_spinbutton, TRUE);
+	g_settings_bind(notification_gtk_settings, "duration", duration_spinbutton, "value", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach(GTK_GRID(popup_grid), duration_spinbutton, 1, 1, 1, 1);
+
+	play_ringtones_label = ui_label_new(_("Play ringtones"));
+	gtk_grid_attach(GTK_GRID(popup_grid), play_ringtones_label, 0, 2, 1, 1);
+
+	play_ringtones_switch = gtk_switch_new();
+	gtk_widget_set_halign(play_ringtones_switch, GTK_ALIGN_START);
+	g_settings_bind(notification_gtk_settings, "play-ringtones", play_ringtones_switch, "active", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach(GTK_GRID(popup_grid), play_ringtones_switch, 1, 2, 1, 1);
+
+	gtk_grid_attach(GTK_GRID(settings_grid), pref_group_create(popup_grid, _("Popup"), TRUE, TRUE), 0, 1, 1, 1);
+
+	return settings_grid;
 }

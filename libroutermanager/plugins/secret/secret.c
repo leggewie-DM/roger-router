@@ -93,7 +93,7 @@ static gchar *secret_get_password(struct profile *profile, const gchar *name)
 
 	if (error != NULL) {
 		/* ... handle the failure here */
-		g_debug("could not store password: %s", error->message);
+		g_debug("could not get password: %s", error->message);
 		g_error_free(error);
 	} else {
 		/* ... do something now that the password has been stored */

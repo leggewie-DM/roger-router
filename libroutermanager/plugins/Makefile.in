@@ -79,10 +79,9 @@ build_triplet = @build@
 host_triplet = @host@
 @WITH_PULSEAUDIO_TRUE@am__append_1 = pulseaudio
 @WITH_PORTAUDIO_TRUE@am__append_2 = portaudio
-@WITH_GSTREAMER0_TRUE@am__append_3 = gstreamer
-@WITH_GSTREAMER1_TRUE@am__append_4 = gstreamer1
-@WITH_SECRET_TRUE@am__append_5 = secret
-@WIN32_TRUE@am__append_6 = wincred
+@WITH_GSTREAMER1_TRUE@am__append_3 = gstreamer1
+@WITH_SECRET_TRUE@am__append_4 = secret
+@WIN32_TRUE@am__append_5 = wincred
 subdir = libroutermanager/plugins
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -151,7 +150,7 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = fritzbox callmonitor areacodes_global reverselookup \
-	pulseaudio portaudio gstreamer gstreamer1 secret wincred
+	pulseaudio portaudio gstreamer1 secret wincred
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -201,6 +200,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CUPS_CFLAGS = @CUPS_CFLAGS@
 CUPS_LIBS = @CUPS_LIBS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
@@ -232,8 +235,6 @@ GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
-GSTREAMER0_CFLAGS = @GSTREAMER0_CFLAGS@
-GSTREAMER0_LIBS = @GSTREAMER0_LIBS@
 GSTREAMER1_CFLAGS = @GSTREAMER1_CFLAGS@
 GSTREAMER1_LIBS = @GSTREAMER1_LIBS@
 GTK_CFLAGS = @GTK_CFLAGS@
@@ -255,6 +256,8 @@ INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL_XGETTEXT = @INTLTOOL_XGETTEXT@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
+KWALLET_CFLAGS = @KWALLET_CFLAGS@
+KWALLET_LIBS = @KWALLET_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBNOTIFY_CFLAGS = @LIBNOTIFY_CFLAGS@
@@ -327,6 +330,7 @@ abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -380,7 +384,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = fritzbox callmonitor areacodes_global reverselookup \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_6)
+	$(am__append_4) $(am__append_5)
 all: all-recursive
 
 .SUFFIXES:

@@ -31,6 +31,7 @@
 
 #include <libroutermanager/voxplay.h>
 #include <libroutermanager/audio.h>
+#include <libroutermanager/appobject-emit.h>
 
 #define MAX_FRAME_SIZE 2000
 
@@ -67,8 +68,11 @@ static gpointer playback_thread(gpointer user_data)
 	int len_cnt = 0;
 
 	speex_decoder_ctl(playback->speex, SPEEX_GET_FRAME_SIZE, &frame_size);
+
+#ifdef VOX_DEBUG
 	g_debug("Frame Size: %d", frame_size);
 	g_debug("Playback len: %" G_GSIZE_FORMAT, playback->len);
+#endif
 
 	while (offset < playback->len && !g_cancellable_is_cancelled(playback->cancel)) {
 		bytes = playback->data[offset];
@@ -82,8 +86,10 @@ static gpointer playback_thread(gpointer user_data)
 		cnt++;
 	}
 
+#ifdef VOX_DEBUG
 	g_debug("cnt: %d", cnt);
 	g_debug("Seconds: %f", (float)(frame_size * cnt) / (float)8000);
+#endif
 
 	len_cnt = cnt;
 	offset = 0;
@@ -157,6 +163,7 @@ gpointer vox_play(gchar *data, gsize len, void (*vox_cb)(gpointer priv, gpointer
 	if (!playback->audio) {
 		g_warning("No audio device");
 		g_slice_free(struct vox_playback, playback);
+		emit_message(0, "No audio device");
 		return NULL;
 	}
 
@@ -165,6 +172,7 @@ gpointer vox_play(gchar *data, gsize len, void (*vox_cb)(gpointer priv, gpointer
 	if (!playback->priv) {
 		g_debug("Could not open audio device");
 		g_slice_free(struct vox_playback, playback);
+		emit_message(0, "Could not open audio device");
 		return NULL;
 	}
 
@@ -179,6 +187,7 @@ gpointer vox_play(gchar *data, gsize len, void (*vox_cb)(gpointer priv, gpointer
 		playback->audio->close(playback->priv, FALSE);
 
 		g_slice_free(struct vox_playback, playback);
+		emit_message(0, "Decoder initialization failed.");
 		return NULL;
 	}
 

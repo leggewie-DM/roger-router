@@ -44,6 +44,7 @@ static GIOChannel *ftp_open_port(gchar *server, gint port)
 	GError *error = NULL;
 	GResolver *resolver = NULL;
 	GList *list = NULL;
+	GList *tmp;
 	GIOChannel *io_channel;
 	gint sock;
 
@@ -56,9 +57,15 @@ static GIOChannel *ftp_open_port(gchar *server, gint port)
 		return NULL;
 	}
 
-	inet_address = g_list_last(list)->data;
+	/* We need a IPV4 connection */
+	for (tmp = list; tmp != NULL; tmp = tmp->next) {
+		if (g_inet_address_get_family(tmp->data) == G_SOCKET_FAMILY_IPV4) {
+			inet_address = tmp->data;
+		}
+	}
+
 	if (inet_address == NULL) {
-		g_warning("Could not get inet address from string: '%s'", server);
+		g_warning("Could not get ipv4 inet address from string: '%s'", server);
 		g_object_unref(socket);
 		g_resolver_free_addresses(list);
 		return NULL;
@@ -117,14 +124,17 @@ gboolean ftp_read_control_response(struct ftp *client)
 	g_debug("Wait for control response");
 #endif
 
+
 	/* Clear previous response message */
 	if (client->response) {
 		g_free(client->response);
 		client->response = NULL;
 	}
 
+	g_timer_start(client->timer);
+
 	/* While timeout is not set, wait for data */
-	while (!client->timeout) {
+	while (g_timer_elapsed(client->timer, NULL) < 3000000) {
 		io_status = g_io_channel_read_line(client->control, &client->response, &length, NULL, &error);
 		if (io_status == G_IO_STATUS_NORMAL) {
 			if (client->response[length - 2] == '\r' && client->response[length - 1] == '\n') {
@@ -145,6 +155,8 @@ gboolean ftp_read_control_response(struct ftp *client)
 			break;
 		}
 	}
+
+	g_timer_stop(client->timer);
 
 	return client->response != NULL;
 }
@@ -173,9 +185,10 @@ gchar *ftp_read_data_response(GIOChannel *channel, gsize *len)
 
 		if (io_status == G_IO_STATUS_NORMAL) {
 			data_size += read;
-			data = g_realloc(data, data_size);
+			data = g_realloc(data, data_size + 1);
 			memcpy(data + data_offset, buffer, read);
 			data_offset += read;
+			data[data_offset] = '\0';
 		} else if (io_status == G_IO_STATUS_AGAIN) {
 			continue;
 		} else {
@@ -194,20 +207,6 @@ gchar *ftp_read_data_response(GIOChannel *channel, gsize *len)
 }
 
 /**
- * \brief Timeout callback - sets internal timeout flag to TRUE
- * \param user_data pointer to ftp client structure
- * \return FALSE
- */
-gboolean ftp_timeout_cb(gpointer user_data)
-{
-	struct ftp *client = user_data;
-
-	client->timeout = TRUE;
-
-	return FALSE;
-}
-
-/**
  * \brief Send FTP command through io channel
  * \param client ftp client structure
  * \param command FTP command
@@ -222,8 +221,6 @@ gboolean ftp_send_command(struct ftp *client, gchar *command)
 
 	ftp_command = g_strconcat(command, "\r\n", NULL);
 
-	client->timeout = FALSE;
-
 	io_status = g_io_channel_write_chars(client->control, ftp_command, strlen(ftp_command), &written, &error);
 	g_free(ftp_command);
 	if (io_status != G_IO_STATUS_NORMAL) {
@@ -231,8 +228,6 @@ gboolean ftp_send_command(struct ftp *client, gchar *command)
 		return FALSE;
 	}
 	g_io_channel_flush(client->control, NULL);
-
-	g_timeout_add_seconds(3, ftp_timeout_cb, client);
 
 	return ftp_read_control_response(client);
 }
@@ -267,6 +262,9 @@ gboolean ftp_login(struct ftp *client, const gchar *user, const gchar *password)
 		if (client->code == 230) {
 			login = TRUE;
 		}
+	} else if (client->code == 230) {
+		/* Already logged in */
+		login = TRUE;
 	}
 
 	return login;
@@ -283,12 +281,20 @@ gboolean ftp_passive(struct ftp *client)
 	gint data_port;
 	guint v[6];
 
+#ifdef FTP_DEBUG
+	g_debug("ftp_passive(): request");
+#endif
+
 	if (client->data) {
 #ifdef FTP_DEBUG
 		g_debug("Data channel already open");
 #endif
 		g_io_channel_shutdown(client->data, FALSE, NULL);
+		g_io_channel_unref(client->data);
 		client->data = NULL;
+#ifdef FTP_DEBUG
+		g_debug("ftp_passive(): data is NULL now");
+#endif
 	}
 
 #ifdef FTP_DEBUG
@@ -498,6 +504,8 @@ struct ftp *ftp_init(const gchar *server)
 		return NULL;
 	}
 
+	client->timer = g_timer_new();
+
 	/* Read welcome message */
 	ftp_read_control_response(client);
 
@@ -515,15 +523,42 @@ struct ftp *ftp_init(const gchar *server)
  */
 gboolean ftp_shutdown(struct ftp *client)
 {
+#ifdef FTP_DEBUG
+	g_debug("ftp_shutdown(): start");
+#endif
+
 	g_return_val_if_fail(client != NULL, FALSE);
 
+	g_timer_destroy(client->timer);
+
+#ifdef FTP_DEBUG
+	g_debug("ftp_shutdown(): free");
+#endif
 	g_free(client->server);
 	g_free(client->response);
 
-	g_io_channel_shutdown(client->control, FALSE, NULL);
-	g_io_channel_shutdown(client->data, FALSE, NULL);
+#ifdef FTP_DEBUG
+	g_debug("ftp_shutdown(): shutdown");
+#endif
 
+	if (client->control) {
+		g_io_channel_shutdown(client->control, FALSE, NULL);
+		g_io_channel_unref(client->control);
+	}
+
+	if (client->data) {
+		g_io_channel_shutdown(client->data, FALSE, NULL);
+		g_io_channel_unref(client->data);
+	}
+
+#ifdef FTP_DEBUG
+	g_debug("ftp_shutdown(): free");
+#endif
 	g_slice_free(struct ftp, client);
+
+#ifdef FTP_DEBUG
+	g_debug("ftp_shutdown(): done");
+#endif
 
 	return TRUE;
 }

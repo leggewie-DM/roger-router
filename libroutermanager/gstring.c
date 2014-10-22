@@ -20,8 +20,9 @@
 #include <string.h>
 
 #include <glib.h>
+#include <glib/gprintf.h>
 
-#include <libroutermanager/gstring.h>
+#include "gstring.h"
 
 /**
  * \brief Search for case-sensitive needle in haystack
@@ -49,36 +50,41 @@ gchar *g_strcasestr(const gchar *haystack, const gchar *needle)
 /**
  * \brief Convert string (if needed) to UTF-8
  * \param text input text string
+ * \param len length of string or -1 for strlen()
  * \return input string in UTF-8 (must be freed)
  */
-gchar *g_convert_utf8(const gchar *text)
+gchar *g_convert_utf8(const gchar *text, gssize len)
 {
 	GError *error = NULL;
 	gsize read_bytes, written_bytes;
-	guchar *chr;
 	gchar *str = NULL;
+	gssize idx;
 
 	if (!text) {
 		g_assert_not_reached();
 	}
 
-	if (g_utf8_validate(text, -1, NULL)) {
-		return g_strdup(text);
+	if (len == -1) {
+		len = strlen(text);
 	}
 
-	for (chr = (guchar *) text; *chr != 0; chr++) {
-		if (*chr < 32 && *chr != '\n') {
-			*chr = ' ';
+	if (g_utf8_validate(text, len, NULL)) {
+		return g_strndup(text, len);
+	}
+
+	/*for (idx = 0; idx < len; idx++) {
+		if (text[idx] < 32 && text[idx] != '\n') {
+			text[idx] = ' ';
 		}
-	}
+	}*/
 
-	str = g_convert(text, strlen(text), "UTF-8", "ISO-8859-1", &read_bytes, &written_bytes, &error);
+	str = g_convert(text, len, "UTF-8", "ISO-8859-1", &read_bytes, &written_bytes, &error);
 	if (str == NULL) {
-		str = g_strdup(text);
+		str = g_strndup(text, len);
 
-		for (chr = (guchar *) str; *chr != 0; chr++) {
-			if (*chr > 128) {
-				*chr = '?';
+		for (idx = 0; idx < len; idx++) {
+			if (str[idx] > 128) {
+				str[idx] = '?';
 			}
 		}
 	}
@@ -268,6 +274,7 @@ static gchar *convert_entities(const gchar *inbuf)
 
 			entity = g_strndup(found + 1, (endfound - found) - 1);
 			len = (found - prevfound);
+			//endfound += (endfound - found);
 			memcpy(outbufloc, prevfound, len);
 			outbufloc += len;
 			unic = unichar_for_entity(entity, TRUE, TRUE, TRUE, TRUE, TRUE);
@@ -310,9 +317,14 @@ gchar *strip_html(gchar *word)
 	gchar *spaced_str = g_regex_replace_literal(space, stripped, -1, 0, " ", 0, NULL);
 	gchar *misc_str = g_regex_replace_literal(misc, spaced_str, -1, 0, "", 0, NULL);
 	gchar *return_str = convert_entities(misc_str);
+
 	g_free(misc_str);
 	g_free(spaced_str);
 	g_free(stripped);
+
+	g_regex_unref(misc);
+	g_regex_unref(space);
+	g_regex_unref(tags);
 
 	g_strstrip(return_str);
 

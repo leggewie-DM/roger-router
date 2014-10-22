@@ -137,9 +137,9 @@ am__libroger_core_la_SOURCES_DIST = about.c about.h application.c \
 	phone.h pref.c pref.h pref_action.c pref_action.h pref_audio.c \
 	pref_audio.h pref_fax.c pref_fax.h pref_filters.c \
 	pref_filters.h pref_plugins.c pref_plugins.h pref_prefix.c \
-	pref_prefix.h pref_router.c pref_router.h pref_softphone.c \
-	pref_softphone.h pref_misc.c pref_misc.h print.c print.h \
-	uitools.c uitools.h
+	pref_prefix.h pref_router.c pref_router.h pref_security.c \
+	pref_security.h pref_softphone.c pref_softphone.h pref_misc.c \
+	pref_misc.h print.c print.h uitools.c uitools.h
 am__objects_1 = libroger_core_la-about.lo \
 	libroger_core_la-application.lo libroger_core_la-assistant.lo \
 	libroger_core_la-contacts.lo libroger_core_la-contact_edit.lo \
@@ -152,6 +152,7 @@ am__objects_1 = libroger_core_la-about.lo \
 	libroger_core_la-pref_plugins.lo \
 	libroger_core_la-pref_prefix.lo \
 	libroger_core_la-pref_router.lo \
+	libroger_core_la-pref_security.lo \
 	libroger_core_la-pref_softphone.lo \
 	libroger_core_la-pref_misc.lo libroger_core_la-print.lo \
 	libroger_core_la-uitools.lo
@@ -177,9 +178,9 @@ am__roger_SOURCES_DIST = about.c about.h application.c application.h \
 	pref.h pref_action.c pref_action.h pref_audio.c pref_audio.h \
 	pref_fax.c pref_fax.h pref_filters.c pref_filters.h \
 	pref_plugins.c pref_plugins.h pref_prefix.c pref_prefix.h \
-	pref_router.c pref_router.h pref_softphone.c pref_softphone.h \
-	pref_misc.c pref_misc.h print.c print.h uitools.c uitools.h \
-	winmain.c
+	pref_router.c pref_router.h pref_security.c pref_security.h \
+	pref_softphone.c pref_softphone.h pref_misc.c pref_misc.h \
+	print.c print.h uitools.c uitools.h winmain.c
 am__objects_2 = roger-about.$(OBJEXT) roger-application.$(OBJEXT) \
 	roger-assistant.$(OBJEXT) roger-contacts.$(OBJEXT) \
 	roger-contact_edit.$(OBJEXT) roger-fax.$(OBJEXT) \
@@ -189,9 +190,9 @@ am__objects_2 = roger-about.$(OBJEXT) roger-application.$(OBJEXT) \
 	roger-pref_action.$(OBJEXT) roger-pref_audio.$(OBJEXT) \
 	roger-pref_fax.$(OBJEXT) roger-pref_filters.$(OBJEXT) \
 	roger-pref_plugins.$(OBJEXT) roger-pref_prefix.$(OBJEXT) \
-	roger-pref_router.$(OBJEXT) roger-pref_softphone.$(OBJEXT) \
-	roger-pref_misc.$(OBJEXT) roger-print.$(OBJEXT) \
-	roger-uitools.$(OBJEXT)
+	roger-pref_router.$(OBJEXT) roger-pref_security.$(OBJEXT) \
+	roger-pref_softphone.$(OBJEXT) roger-pref_misc.$(OBJEXT) \
+	roger-print.$(OBJEXT) roger-uitools.$(OBJEXT)
 @WIN32_TRUE@am__objects_3 = roger-winmain.$(OBJEXT)
 am_roger_OBJECTS = $(am__objects_2) $(am__objects_3)
 roger_OBJECTS = $(am_roger_OBJECTS)
@@ -327,6 +328,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CUPS_CFLAGS = @CUPS_CFLAGS@
 CUPS_LIBS = @CUPS_LIBS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
@@ -358,8 +363,6 @@ GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
-GSTREAMER0_CFLAGS = @GSTREAMER0_CFLAGS@
-GSTREAMER0_LIBS = @GSTREAMER0_LIBS@
 GSTREAMER1_CFLAGS = @GSTREAMER1_CFLAGS@
 GSTREAMER1_LIBS = @GSTREAMER1_LIBS@
 GTK_CFLAGS = @GTK_CFLAGS@
@@ -381,6 +384,8 @@ INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL_XGETTEXT = @INTLTOOL_XGETTEXT@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
+KWALLET_CFLAGS = @KWALLET_CFLAGS@
+KWALLET_LIBS = @KWALLET_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBNOTIFY_CFLAGS = @LIBNOTIFY_CFLAGS@
@@ -453,6 +458,7 @@ abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -511,7 +517,11 @@ share_DATA = \
 	images/app.png \
 	images/callin.png \
 	images/callmissed.png \
-	images/callout.png
+	images/callout.png \
+	images/default.png \
+	images/mono-dark.png \
+	images/mono-lite.png \
+	images/notify.png
 
 EXTRA_DIST = $(share_DATA) images/hicolor_apps_scalable_roger.svg roger_winres.rc
 roger_CFLAGS = $(EXTRA_CFLAGS) $(GTK_CFLAGS) $(GMODULE_CFLAGS) -Wall -O2 -g $(PEAS_GTK_CFLAGS) $(SNDFILE_CFLAGS) $(AM_CFLAGS) $(OS_CFLAGS)
@@ -559,6 +569,8 @@ roger_core_SOURCES = \
 	pref_prefix.h\
 	pref_router.c\
 	pref_router.h\
+	pref_security.c\
+	pref_security.h\
 	pref_softphone.c\
 	pref_softphone.h\
 	pref_misc.c\
@@ -751,6 +763,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-pref_plugins.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-pref_prefix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-pref_router.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-pref_security.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-pref_softphone.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-print.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libroger_core_la-uitools.Plo@am__quote@
@@ -774,6 +787,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-pref_plugins.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-pref_prefix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-pref_router.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-pref_security.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-pref_softphone.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-print.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roger-uitools.Po@am__quote@
@@ -932,6 +946,13 @@ libroger_core_la-pref_router.lo: pref_router.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='pref_router.c' object='libroger_core_la-pref_router.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroger_core_la_CFLAGS) $(CFLAGS) -c -o libroger_core_la-pref_router.lo `test -f 'pref_router.c' || echo '$(srcdir)/'`pref_router.c
+
+libroger_core_la-pref_security.lo: pref_security.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroger_core_la_CFLAGS) $(CFLAGS) -MT libroger_core_la-pref_security.lo -MD -MP -MF $(DEPDIR)/libroger_core_la-pref_security.Tpo -c -o libroger_core_la-pref_security.lo `test -f 'pref_security.c' || echo '$(srcdir)/'`pref_security.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libroger_core_la-pref_security.Tpo $(DEPDIR)/libroger_core_la-pref_security.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='pref_security.c' object='libroger_core_la-pref_security.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroger_core_la_CFLAGS) $(CFLAGS) -c -o libroger_core_la-pref_security.lo `test -f 'pref_security.c' || echo '$(srcdir)/'`pref_security.c
 
 libroger_core_la-pref_softphone.lo: pref_softphone.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libroger_core_la_CFLAGS) $(CFLAGS) -MT libroger_core_la-pref_softphone.lo -MD -MP -MF $(DEPDIR)/libroger_core_la-pref_softphone.Tpo -c -o libroger_core_la-pref_softphone.lo `test -f 'pref_softphone.c' || echo '$(srcdir)/'`pref_softphone.c
@@ -1226,6 +1247,20 @@ roger-pref_router.obj: pref_router.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='pref_router.c' object='roger-pref_router.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -c -o roger-pref_router.obj `if test -f 'pref_router.c'; then $(CYGPATH_W) 'pref_router.c'; else $(CYGPATH_W) '$(srcdir)/pref_router.c'; fi`
+
+roger-pref_security.o: pref_security.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -MT roger-pref_security.o -MD -MP -MF $(DEPDIR)/roger-pref_security.Tpo -c -o roger-pref_security.o `test -f 'pref_security.c' || echo '$(srcdir)/'`pref_security.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/roger-pref_security.Tpo $(DEPDIR)/roger-pref_security.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='pref_security.c' object='roger-pref_security.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -c -o roger-pref_security.o `test -f 'pref_security.c' || echo '$(srcdir)/'`pref_security.c
+
+roger-pref_security.obj: pref_security.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -MT roger-pref_security.obj -MD -MP -MF $(DEPDIR)/roger-pref_security.Tpo -c -o roger-pref_security.obj `if test -f 'pref_security.c'; then $(CYGPATH_W) 'pref_security.c'; else $(CYGPATH_W) '$(srcdir)/pref_security.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/roger-pref_security.Tpo $(DEPDIR)/roger-pref_security.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='pref_security.c' object='roger-pref_security.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -c -o roger-pref_security.obj `if test -f 'pref_security.c'; then $(CYGPATH_W) 'pref_security.c'; else $(CYGPATH_W) '$(srcdir)/pref_security.c'; fi`
 
 roger-pref_softphone.o: pref_softphone.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(roger_CFLAGS) $(CFLAGS) -MT roger-pref_softphone.o -MD -MP -MF $(DEPDIR)/roger-pref_softphone.Tpo -c -o roger-pref_softphone.o `test -f 'pref_softphone.c' || echo '$(srcdir)/'`pref_softphone.c

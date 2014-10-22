@@ -81,9 +81,9 @@ build_triplet = @build@
 host_triplet = @host@
 DIST_COMMON = $(srcdir)/../Makefile.plugins $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am $(top_srcdir)/depcomp
-@WIN32_TRUE@am__append_1 = -L$(top_srcdir)/libroutermanager/.libs -lroutermanager -no-undefined
-@MACOSX_TRUE@am__append_2 = -L$(top_srcdir)/libroutermanager/.libs -lroutermanager -no-undefined
-subdir = libroutermanager/plugins/gstreamer
+@WIN32_TRUE@am__append_1 = -L$(top_srcdir)/libroutermanager/.libs -lroutermanager -L$(top_srcdir)/roger/.libs -lroger_core -no-undefined
+@MACOSX_TRUE@am__append_2 = -L$(top_srcdir)/libroutermanager/.libs -lroutermanager -L$(top_srcdir)/roger/.libs -lroger_core -no-undefined
+subdir = roger/plugins/kwallet
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/intltool.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
@@ -125,18 +125,20 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(plugindir)" "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(plugin_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-libgstreamer_la_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+libkwallet_la_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_1)
-am_libgstreamer_la_OBJECTS = libgstreamer_la-gstreamer.lo
-libgstreamer_la_OBJECTS = $(am_libgstreamer_la_OBJECTS)
+am_libkwallet_la_OBJECTS = libkwallet_la-kwallet.lo \
+	libkwallet_la-kwallet_wrapper.lo
+libkwallet_la_OBJECTS = $(am_libkwallet_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-libgstreamer_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libgstreamer_la_CFLAGS) $(CFLAGS) $(libgstreamer_la_LDFLAGS) \
+libkwallet_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(libkwallet_la_CXXFLAGS) $(CXXFLAGS) $(libkwallet_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -154,26 +156,26 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CFLAGS) $(CFLAGS)
-AM_V_CC = $(am__v_CC_@AM_V@)
-am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
-am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 = 
-CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_CCLD = $(am__v_CCLD_@AM_V@)
-am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
-am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 = 
-SOURCES = $(libgstreamer_la_SOURCES)
-DIST_SOURCES = $(libgstreamer_la_SOURCES)
+	$(AM_CXXFLAGS) $(CXXFLAGS)
+AM_V_CXX = $(am__v_CXX_@AM_V@)
+am__v_CXX_ = $(am__v_CXX_@AM_DEFAULT_V@)
+am__v_CXX_0 = @echo "  CXX     " $@;
+am__v_CXX_1 = 
+CXXLD = $(CXX)
+CXXLINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
+am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
+am__v_CXXLD_0 = @echo "  CXXLD   " $@;
+am__v_CXXLD_1 = 
+SOURCES = $(libkwallet_la_SOURCES)
+DIST_SOURCES = $(libkwallet_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -223,6 +225,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CUPS_CFLAGS = @CUPS_CFLAGS@
 CUPS_LIBS = @CUPS_LIBS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
@@ -254,8 +260,6 @@ GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
-GSTREAMER0_CFLAGS = @GSTREAMER0_CFLAGS@
-GSTREAMER0_LIBS = @GSTREAMER0_LIBS@
 GSTREAMER1_CFLAGS = @GSTREAMER1_CFLAGS@
 GSTREAMER1_LIBS = @GSTREAMER1_LIBS@
 GTK_CFLAGS = @GTK_CFLAGS@
@@ -277,6 +281,8 @@ INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL_XGETTEXT = @INTLTOOL_XGETTEXT@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
+KWALLET_CFLAGS = @KWALLET_CFLAGS@
+KWALLET_LIBS = @KWALLET_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBNOTIFY_CFLAGS = @LIBNOTIFY_CFLAGS@
@@ -349,6 +355,7 @@ abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -400,40 +407,46 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-plugin_in_files = gstreamer.plugin
+plugin_in_files = kwallet.plugin
 plugin_DATA = $(plugin_in_files:.plugin.in=.plugin)
 CLEANFILES = $(plugin_DATA)
 DISTCLEANFILES = $(plugin_DATA)
 EXTRA_DIST = $(plugin_in_files).in
 AM_CFLAGS = \
+	$(GTK_CFLAGS) \
 	$(PEAS_CFLAGS)		\
 	$(OS_CFLAGS) \
+	$(EXTRA_CFLAGS) \
 	-I$(top_srcdir)/
 
 plugin_cflags = \
+	$(GTK_CFLAGS) \
 	$(PEAS_CFLAGS)		\
 	$(OS_CFLAGS) \
+	$(EXTRA_CFLAGS) \
 	-I$(top_srcdir)/
 
 plugin_ldflags = -export-dynamic -no-undefined -avoid-version -module \
-	-shared $(PLUGIN_LIBTOOL_FLAGS) $(am__append_1) \
-	$(am__append_2)
+	$(PLUGIN_LIBTOOL_FLAGS) $(am__append_1) $(am__append_2)
 plugin_libadd = \
-	$(PEAS_LIBS) \
-	$(OS_LIBS)
+	$(GTK_LIBS) \
+	$(PEAS_GTK_LIBS) \
+	$(OS_LIBS) \
+	$(PEAS_LIBS)
 
-plugindir = $(libdir)/routermanager/plugins/gstreamer
-plugin_LTLIBRARIES = libgstreamer.la
-libgstreamer_la_SOURCES = \
-	gstreamer.c
+plugindir = $(libdir)/roger/plugins/kwallet
+plugin_LTLIBRARIES = libkwallet.la
+libkwallet_la_SOURCES = \
+	kwallet.cpp \
+	kwallet_wrapper.cpp
 
-libgstreamer_la_CFLAGS = $(plugin_cflags) $(GSTREAMER0_CFLAGS) -DGST_DISABLE_DEPRECATED
-libgstreamer_la_LDFLAGS = $(plugin_ldflags)
-libgstreamer_la_LIBADD = $(plugin_libadd) $(GSTREAMER0_LIBS)
+libkwallet_la_CXXFLAGS = $(plugin_cflags) $(KWALLET_CFLAGS)
+libkwallet_la_LDFLAGS = $(plugin_ldflags) $(KWALLET_LIBS)
+libkwallet_la_LIBADD = $(plugin_libadd) $(KWALLET_LIBS)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .obj
+.SUFFIXES: .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/../Makefile.plugins $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -443,9 +456,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/../Makefile.plugins $(am
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu libroutermanager/plugins/gstreamer/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu roger/plugins/kwallet/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu libroutermanager/plugins/gstreamer/Makefile
+	  $(AUTOMAKE) --gnu roger/plugins/kwallet/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -501,8 +514,8 @@ clean-pluginLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libgstreamer.la: $(libgstreamer_la_OBJECTS) $(libgstreamer_la_DEPENDENCIES) $(EXTRA_libgstreamer_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libgstreamer_la_LINK) -rpath $(plugindir) $(libgstreamer_la_OBJECTS) $(libgstreamer_la_LIBADD) $(LIBS)
+libkwallet.la: $(libkwallet_la_OBJECTS) $(libkwallet_la_DEPENDENCIES) $(EXTRA_libkwallet_la_DEPENDENCIES) 
+	$(AM_V_CXXLD)$(libkwallet_la_LINK) -rpath $(plugindir) $(libkwallet_la_OBJECTS) $(libkwallet_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -510,35 +523,43 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgstreamer_la-gstreamer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libkwallet_la-kwallet.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libkwallet_la-kwallet_wrapper.Plo@am__quote@
 
-.c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c $<
+.cpp.o:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
 
-.c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c `$(CYGPATH_W) '$<'`
+.cpp.obj:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-.c.lo:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LTCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+.cpp.lo:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
 
-libgstreamer_la-gstreamer.lo: gstreamer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgstreamer_la_CFLAGS) $(CFLAGS) -MT libgstreamer_la-gstreamer.lo -MD -MP -MF $(DEPDIR)/libgstreamer_la-gstreamer.Tpo -c -o libgstreamer_la-gstreamer.lo `test -f 'gstreamer.c' || echo '$(srcdir)/'`gstreamer.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgstreamer_la-gstreamer.Tpo $(DEPDIR)/libgstreamer_la-gstreamer.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gstreamer.c' object='libgstreamer_la-gstreamer.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgstreamer_la_CFLAGS) $(CFLAGS) -c -o libgstreamer_la-gstreamer.lo `test -f 'gstreamer.c' || echo '$(srcdir)/'`gstreamer.c
+libkwallet_la-kwallet.lo: kwallet.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libkwallet_la_CXXFLAGS) $(CXXFLAGS) -MT libkwallet_la-kwallet.lo -MD -MP -MF $(DEPDIR)/libkwallet_la-kwallet.Tpo -c -o libkwallet_la-kwallet.lo `test -f 'kwallet.cpp' || echo '$(srcdir)/'`kwallet.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libkwallet_la-kwallet.Tpo $(DEPDIR)/libkwallet_la-kwallet.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='kwallet.cpp' object='libkwallet_la-kwallet.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libkwallet_la_CXXFLAGS) $(CXXFLAGS) -c -o libkwallet_la-kwallet.lo `test -f 'kwallet.cpp' || echo '$(srcdir)/'`kwallet.cpp
+
+libkwallet_la-kwallet_wrapper.lo: kwallet_wrapper.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libkwallet_la_CXXFLAGS) $(CXXFLAGS) -MT libkwallet_la-kwallet_wrapper.lo -MD -MP -MF $(DEPDIR)/libkwallet_la-kwallet_wrapper.Tpo -c -o libkwallet_la-kwallet_wrapper.lo `test -f 'kwallet_wrapper.cpp' || echo '$(srcdir)/'`kwallet_wrapper.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libkwallet_la-kwallet_wrapper.Tpo $(DEPDIR)/libkwallet_la-kwallet_wrapper.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='kwallet_wrapper.cpp' object='libkwallet_la-kwallet_wrapper.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libkwallet_la_CXXFLAGS) $(CXXFLAGS) -c -o libkwallet_la-kwallet_wrapper.lo `test -f 'kwallet_wrapper.cpp' || echo '$(srcdir)/'`kwallet_wrapper.cpp
 
 mostlyclean-libtool:
 	-rm -f *.lo
