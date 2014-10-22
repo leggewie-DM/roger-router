@@ -926,7 +926,9 @@ static int capi_indication(_cmsg capi_message)
 
 	/* CAPI_DATA_B3 - data - receive/send */
 	case CAPI_DATA_B3:
+#ifdef FAXOPHONE_DEBUG
 		g_debug("IND: CAPI_DATA_B3");
+#endif
 		ncci = DATA_B3_IND_NCCI(&capi_message);
 
 		connection = capi_find_ncci(ncci);
@@ -934,12 +936,11 @@ static int capi_indication(_cmsg capi_message)
 			break;
 		}
 
+#ifdef FAXOPHONE_DEBUG
 		g_debug("IND: CAPI_DATA_B3 - nConnection: %d, plci: %ld, ncci: %ld", connection->id, connection->plci, connection->ncci);
-		if (connection->data) {
-			connection->data(connection, capi_message);
-		} else {
-			DATA_B3_RESP(&cmsg1, session->appl_id, session->message_number++, connection->ncci, DATA_B3_IND_DATAHANDLE(&capi_message));
-		}
+#endif
+		connection->data(connection, capi_message);
+
 		break;
 
 	/* CAPI_FACILITY - Facility (DTMF) */
@@ -1356,11 +1357,15 @@ static void capi_confirmation(_cmsg capi_message)
 		break;
 	case CAPI_DATA_B3:
 		/* Sent data acknowledge, NOP */
+#ifdef FAXOPHONE_DEBUG
 		g_debug("CNF: DATA_B3");
+#endif
 		info = DATA_B3_CONF_INFO(&capi_message);
 		ncci = DATA_B3_CONF_NCCI(&capi_message);
 
+#ifdef FAXOPHONE_DEBUG
 		g_debug("CNF: CAPI_ALERT: info %d, ncci %d", info, ncci);
+#endif
 
 		connection = capi_find_ncci(ncci);
 		if (connection && connection->use_buffers && connection->buffers) {

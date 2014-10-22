@@ -103,6 +103,7 @@ static void parse_person(struct contact *contact, xmlnode *person)
 				ftp_login(client, router_get_ftp_user(profile), router_get_ftp_password(profile));
 				ftp_passive(client);
 				buffer = (guchar *) ftp_get_file(client, url, &len);
+				ftp_shutdown(client);
 
 				loader = gdk_pixbuf_loader_new();
 				if (gdk_pixbuf_loader_write(loader, buffer, len, NULL)) {
@@ -628,6 +629,7 @@ gboolean fritzfon_save(void)
 		g_object_unref(msg);
 		return FALSE;
 	}
+	g_object_unref(msg);
 
 	return TRUE;
 }
@@ -662,6 +664,7 @@ void fritzfon_set_image(struct contact *contact)
 
 	data = file_load(contact->image_uri, &size);
 	ftp_put_file(client, file_name, path, data, size);
+	ftp_shutdown(client);
 
 	priv->image_url = g_strdup_printf("file:///var/media/ftp/%s%s", path, file_name);
 	g_free(path);
