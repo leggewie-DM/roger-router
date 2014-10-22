@@ -1,0 +1,26 @@
+.\" Copyright (c) 2009-2013, Jan-Michael Brummer <jan.brummer@tabos.org>
+.TH roger 1 "" "Roger Router Version @PACKAGE_VERSION@"
+.SH NAME
+roger \- Router Manager
+.SH SYNOPSIS
+.B roger
+
+.SH DESCRIPTION
+.PP
+\fBRoger Router\fP is a clean solution for controlling the FRITZ!Box or compatible
+router with Linux. It offers a rich feature list, including caller monitor,
+fax and softphone support.
+
+.SH SEE ALSO
+\fIhttp://www.tabos.org/roger/\fP
+
+.SH LICENSE
+Copyright (c) 2009-2013 Jan-Michael Brummer
+
+.SH AUTHORS
+Roger Router's active developers are:
+.br
+ Jan-Michael Brummer (developer)
+.br
+
+This manpage was written by Jan-Michael Brummer <\fIjan.brummer@tabos.org\fR>.
