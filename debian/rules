@@ -13,7 +13,6 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		--with-spandsp=6 \
 		--with-libnotify=yes \
-		--with-cups=yes \
 		--with-secret=yes \
 		--with-ebook=yes \
 		--with-gstreamer1=yes \
@@ -33,6 +32,6 @@ override_dh_install:
 
 override_dh_fixperms:
 	dh_fixperms
-	chmod 755 debian/roger-router-cli/usr/share/roger/roger-cups
+	chmod 755 debian/roger-router-cli/usr/lib/cups/backend/roger-cups
 	chown lp.fax debian/roger-router-cli/var/spool/roger
 	chmod 2770 debian/roger-router-cli/var/spool/roger

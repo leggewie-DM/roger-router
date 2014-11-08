@@ -81,7 +81,7 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  fax_send@Base 1.8.4
  fax_set_log_level@Base 1.8.4
  fax_spandsp_workaround@Base 1.8.4
- fax_spooler_new_dir_cb@Base 1.8.4
+#MISSING: 1.8.9-2# fax_spooler_new_dir_cb@Base 1.8.4
  fax_transfer@Base 1.8.4
  faxophone_close@Base 1.8.4
  faxophone_connect@Base 1.8.4

@@ -1,6 +1,6 @@
 usr/bin/roger_cli
 usr/lib/*/routermanager/
-usr/lib/cups/backend/roger-cups
 usr/share/man/*/roger_cli*
-usr/share/roger/roger-cups
+usr/share/roger/roger-cups usr/lib/cups/backend/
 usr/share/roger/roger-fax.ppd
+
