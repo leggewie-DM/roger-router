@@ -67,7 +67,7 @@ Description: Home router management tool - command-line interface
 Package: ffgtk
 Section: oldlibs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, roger-router
+Depends: ${misc:Depends}, roger-router
 Description: transitional dummy package - ffgtk to roger
  migrate users from the obsolete and abandoned ffgtk package to the
  new Roger Router.
