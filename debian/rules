@@ -27,12 +27,12 @@ override_dh_install:
 	# do not ship *.la and *.a files
 	find debian/ -name \*.la -delete
 	find debian/ -name \*.a -delete
+	find debian/ -name install-fax.sh -delete
 
 	dh_install --list-missing
 
 override_dh_fixperms:
 	dh_fixperms
 	chmod 755 debian/roger-router-cli/usr/share/roger/roger-cups
-	chmod 755 debian/roger-router-cli/usr/share/roger/install-fax.sh
 	chown lp.fax debian/roger-router-cli/var/spool/roger
 	chmod 2770 debian/roger-router-cli/var/spool/roger
