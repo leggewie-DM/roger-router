@@ -28,6 +28,7 @@
 #include <libroutermanager/router.h>
 #include <libroutermanager/appobject-emit.h>
 #include <libroutermanager/net_monitor.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/journal.h>
 #include <roger/assistant.h>
@@ -40,7 +41,7 @@
 
 #include <config.h>
 
-static GtkApplication *application;
+GtkApplication *application;
 static gboolean startup_called = FALSE;
 GSettings *app_settings = NULL;
 
@@ -151,6 +152,57 @@ static void reconnect_activated(GSimpleAction *action, GVariant *parameter, gpoi
 	app_reconnect();
 }
 
+#include <libroutermanager/libfaxophone/phone.h>
+#include <libroutermanager/fax_phone.h>
+
+static void pickup_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
+{
+#if 0
+	gint32 id = g_variant_get_int32(parameter);
+	struct connection *connection = connection_find_by_id(id);
+	struct contact *contact;
+
+	g_assert(connection != NULL);
+
+	/** Ask for contact information */
+	contact = contact_find_by_number(connection->remote_number);
+
+	/* Close notifications */
+	//notify_gnotification_close(connection->notification, NULL);
+	connection->notification = NULL;
+
+	if (!connection->priv)
+		connection->priv = active_capi_connection;
+	}
+
+	/* Show phone window */
+	app_show_phone_window(contact);
+
+	/* Pickup phone and add connection */
+	phone_pickup(connection->priv);
+	phone_add_connection(connection->priv);
+#endif
+}
+
+static void hangup_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
+{
+#if 0
+	gint32 id = g_variant_get_int32(parameter);
+	struct connection *connection = connection_find_by_id(id);
+
+	g_assert(connection != NULL);
+
+	//notify_gnotification_close(connection->notification, NULL);
+	connection->notification = NULL;
+
+	if (!connection->priv)
+		connection->priv = active_capi_connection;
+	}
+
+	phone_hangup(connection->priv);
+#endif
+}
+
 static GActionEntry apps_entries[] = {
 	{"addressbook", addressbook_activated, NULL, NULL, NULL},
 	{"preferences", preferences_activated, NULL, NULL, NULL},
@@ -161,6 +213,8 @@ static GActionEntry apps_entries[] = {
 	{"forum", forum_activated, NULL, NULL, NULL},
 	{"about", about_activated, NULL, NULL, NULL},
 	{"quit", quit_activated, NULL, NULL, NULL},
+	{"pickup", pickup_activated, "i", NULL, NULL},
+	{"hangup", hangup_activated, "i", NULL, NULL},
 };
 
 static void application_startup(GApplication *application)
@@ -260,6 +314,12 @@ static void app_init(Application *app)
 	if (net_is_online() && !profile_get_active()) {
 		assistant();
 	}
+
+#if 0
+	struct connection *connection = connection_add_call(2, CONNECTION_TYPE_INCOMING, "456789", "81570");
+
+	emit_connection_notify(connection);
+#endif
 }
 
 static void application_class_init(ApplicationClass *class)
@@ -335,17 +395,14 @@ static gint application_command_line_cb(GApplication *app, GApplicationCommandLi
 	}
 
 	if (option_state.number) {
-		struct contact contact_s;
-		struct contact *contact = &contact_s;
+		struct contact *contact;
 		gchar *full_number;
 
 		g_debug("number: %s", option_state.number);
 		full_number = call_full_number(option_state.number, FALSE);
 
 		/** Ask for contact information */
-		memset(contact, 0, sizeof(struct contact));
-		contact_s.number = full_number;
-		emit_contact_process(contact);
+		contact = contact_find_by_number(full_number);
 
 		app_show_phone_window(contact);
 		g_free(full_number);
@@ -368,7 +425,7 @@ Application *application_new(void)
 	                           "flags", G_APPLICATION_HANDLES_COMMAND_LINE,
 	                           NULL);
 
-	app_settings = g_settings_new(APP_GSETTINGS_SCHEMA);
+	app_settings = rm_settings_new(APP_GSETTINGS_SCHEMA, NULL, "roger.conf");
 	g_signal_connect(application, "startup", G_CALLBACK(application_startup), application);
 	g_signal_connect(application, "command-line", G_CALLBACK(application_command_line_cb), application);
 

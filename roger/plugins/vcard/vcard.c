@@ -32,6 +32,7 @@
 #include <libroutermanager/appobject.h>
 #include <libroutermanager/file.h>
 #include <libroutermanager/router.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include <roger/pref.h>
@@ -433,6 +434,7 @@ static void process_photo(struct vcard_data *card_data, struct contact *contact)
 	loader = gdk_pixbuf_loader_new();
 	if (gdk_pixbuf_loader_write(loader, image_ptr, len, &error)) {
 		contact->image = gdk_pixbuf_loader_get_pixbuf(loader);
+		contact->image_len = len;
 	} else {
 		g_debug("Error!! (%s)", error->message);
 		g_free(image_ptr);
@@ -905,8 +907,6 @@ void vcard_write_file(char *file_name)
 
 	data = g_string_new("");
 
-	file_name = g_strdup("/home/buzz/roger-test.vcf");
-
 	current_position = 0;
 
 	for (list = contacts; list != NULL && list->data != NULL; list = list->next) {
@@ -1114,7 +1114,7 @@ void impl_activate(PeasActivatable *plugin)
 {
 	gchar *name;
 
-	vcard_settings = g_settings_new("org.tabos.roger.plugins.vcard");
+	vcard_settings = rm_settings_plugin_new("org.tabos.roger.plugins.vcard", "vcard");
 
 	name = g_settings_get_string(vcard_settings, "filename");
 

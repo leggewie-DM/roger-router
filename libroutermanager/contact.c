@@ -22,6 +22,8 @@
 #include <glib.h>
 
 #include <libroutermanager/contact.h>
+#include <libroutermanager/appobject-emit.h>
+#include <libroutermanager/router.h>
 
 void contact_copy(struct contact *src, struct contact *dst)
 {
@@ -40,6 +42,12 @@ void contact_copy(struct contact *src, struct contact *dst)
 		dst->numbers = g_slist_copy(src->numbers);
 	} else {
 		dst->numbers = NULL;
+	}
+
+	if (src->addresses) {
+		dst->addresses = g_slist_copy(src->addresses);
+	} else {
+		dst->addresses = NULL;
 	}
 
 	if (src->number) {
@@ -85,4 +93,57 @@ gint contact_name_compare(gconstpointer a, gconstpointer b)
 	struct contact *contact_b = (struct contact *)b;
 
 	return strcasecmp(contact_a->name, contact_b->name);
+}
+
+struct contact *contact_find_by_number(gchar *number)
+{
+	struct contact *contact = g_slice_new0(struct contact);
+	GSList *numbers;
+	GSList *addresses;
+	int type = -1;
+
+	/** Ask for contact information */
+	contact->number = number;
+	emit_contact_process(contact);
+
+	/* Depending on the number set the active address */
+	for (numbers = contact->numbers; numbers != NULL; numbers = numbers->next) {
+		struct phone_number *phone_number = numbers->data;
+
+		if (!strcmp(number, phone_number->number)) {
+			type = phone_number->type;
+			break;
+		}
+	}
+
+	if (type == -1) {
+		return contact;
+	}
+
+	switch (type) {
+	case PHONE_NUMBER_HOME:
+	case PHONE_NUMBER_FAX_HOME:
+	case PHONE_NUMBER_MOBILE:
+	default:
+		type = 0;
+		break;
+	case PHONE_NUMBER_WORK:
+	case PHONE_NUMBER_FAX_WORK:
+	case PHONE_NUMBER_PAGER:
+		type = 1;
+		break;
+	}
+
+	for (addresses = contact->addresses; addresses != NULL; addresses = addresses->next) {
+		struct contact_address *contact_address = addresses->data;
+
+		if (contact_address->type == type) {
+			contact->street = contact_address->street;
+			contact->city = contact_address->city;
+			contact->zip = contact_address->zip;
+			break;
+		}
+	}
+
+	return contact;
 }

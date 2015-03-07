@@ -32,6 +32,8 @@ G_BEGIN_DECLS
 #define ROUTERMANAGER_SCHEME_PROFILE "org.tabos.routermanager.profile"
 #define ROUTERMANAGER_SCHEME_PROFILE_ACTION "org.tabos.routermanager.profile.action"
 
+#define ROUTERMANAGER_PATH "/org/tabos/routermanager/"
+
 #define RM_ERROR rm_print_error_quark()
 
 typedef enum {

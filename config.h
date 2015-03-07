@@ -26,7 +26,7 @@
 #define HAVE_DLFCN_H 1
 
 /* Have libebook >= 3.5.4 */
-#define HAVE_EBOOK_SOURCE_REGISTRY 1
+/* #undef HAVE_EBOOK_SOURCE_REGISTRY */
 
 /* Have faxophone */
 #define HAVE_FAXOPHONE 1
@@ -44,7 +44,7 @@
 /* #undef HAVE_KWALLET */
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
-#define HAVE_LC_MESSAGES 1
+/* #undef HAVE_LC_MESSAGES */
 
 /* Define to 1 if you have the `gthread-2.0' library (-lgthread-2.0). */
 #define HAVE_LIBGTHREAD_2_0 1
@@ -53,7 +53,7 @@
 #define HAVE_LIBM 1
 
 /* Have libnotify */
-#define HAVE_LIBNOTIFY 1
+/* #undef HAVE_LIBNOTIFY */
 
 /* Define to 1 if you have the `tiff' library (-ltiff). */
 #define HAVE_LIBTIFF 1
@@ -65,13 +65,13 @@
 #define HAVE_MEMORY_H 1
 
 /* Have portaudio */
-/* #undef HAVE_PORTAUDIO */
+#define HAVE_PORTAUDIO 1
 
 /* Have pulseaudio */
-#define HAVE_PULSEAUDIO 1
+/* #undef HAVE_PULSEAUDIO */
 
 /* Define to 1 if you have the `sigaction' function. */
-#define HAVE_SIGACTION 1
+/* #undef HAVE_SIGACTION */
 
 /* Define to 1 if you have the `sigset' function. */
 /* #undef HAVE_SIGSET */
@@ -104,9 +104,6 @@
    */
 #define LT_OBJDIR ".libs/"
 
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-/* #undef NO_MINUS_C_MINUS_O */
-
 /* Name of package */
 #define PACKAGE "roger-router"
 
@@ -117,7 +114,7 @@
 #define PACKAGE_NAME "Roger Router"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Roger Router 1.8.9"
+#define PACKAGE_STRING "Roger Router 1.8.10"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "roger-router"
@@ -126,19 +123,16 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.8.9"
+#define PACKAGE_VERSION "1.8.10"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
-/* Use headerbar */
-/* #undef USE_HEADERBAR */
-
 /* Use printer server on port 9100 */
-/* #undef USE_PRINTER_SERVER */
+#define USE_PRINTER_SERVER 1
 
 /* Expect files in spooler directory /var/spool/roger */
-#define USE_PRINTER_SPOOLER 1
+/* #undef USE_PRINTER_SPOOLER */
 
 /* Version number of package */
-#define VERSION "1.8.9"
+#define VERSION "1.8.10"

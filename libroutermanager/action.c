@@ -26,6 +26,7 @@
 #include <libroutermanager/appobject-emit.h>
 #include <libroutermanager/routermanager.h>
 #include <libroutermanager/gstring.h>
+#include <libroutermanager/settings.h>
 
 /**
  * \brief Parse the input string and replaces templates with connection information
@@ -39,8 +40,7 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 	GRegex *number = g_regex_new("%NUMBER%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
 	GRegex *name = g_regex_new("%NAME%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
 	GRegex *company = g_regex_new("%COMPANY%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
+	struct contact *contact;
 	gchar *tmp0;
 	gchar *tmp1;
 	gchar *tmp2;
@@ -52,14 +52,12 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 	tmp1 = g_regex_replace_literal(line, tmp0, -1, 0, connection->local_number, 0, NULL);
 
 	/** Based on connection ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	contact = contact_find_by_number(connection->remote_number);
 
 	/* Replace company template */
-	tmp2 = g_regex_replace_literal(company, tmp1, -1, 0, contact_s.company != NULL ? contact_s.company : "", 0, NULL);
+	tmp2 = g_regex_replace_literal(company, tmp1, -1, 0, contact->company != NULL ? contact->company : "", 0, NULL);
 	/* Replace name template */
-	out = g_regex_replace_literal(name, tmp2, -1, 0, contact_s.name != NULL ? contact_s.name : "", 0, NULL);
+	out = g_regex_replace_literal(name, tmp2, -1, 0, contact->name != NULL ? contact->name : "", 0, NULL);
 
 	/* Free temporary data fields */
 	g_free(tmp2);
@@ -175,6 +173,7 @@ struct action *action_create(void)
 struct action *action_modify(struct action *action, const gchar *name, const gchar *description, const gchar *exec, gchar **numbers)
 {
 	gchar *settings_path;
+	gchar *filename;
 
 	action->name = g_strdup(name);
 	action->description = g_strdup(description);
@@ -183,7 +182,9 @@ struct action *action_modify(struct action *action, const gchar *name, const gch
 
 	/* Setup action settings */
 	settings_path = g_strconcat("/org/tabos/routermanager/profile/", profile_get_active()->name, "/", name, "/", NULL);
-	action->settings = g_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path);
+	filename = g_strconcat("actions/", profile_get_active()->name, "-", name, NULL);
+	action->settings = rm_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path, filename);
+	g_free(filename);
 
 	g_settings_set_string(action->settings, "name", action->name);
 	g_settings_set_string(action->settings, "description", action->description);
@@ -276,6 +277,7 @@ static void action_load(struct profile *profile, const gchar *name)
 {
 	struct action *action;
 	gchar *settings_path;
+	gchar *filename;
 
 	/* Allocate fixed struct */
 	action = g_slice_new0(struct action);
@@ -284,7 +286,9 @@ static void action_load(struct profile *profile, const gchar *name)
 	settings_path = g_strconcat("/org/tabos/routermanager/profile/", profile->name, "/", name, "/", NULL);
 
 	/* Create/Read settings from path */
-	action->settings = g_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path);
+	filename = g_strconcat("actions/", profile->name, "-", name, NULL);
+	action->settings = rm_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path, filename);
+	g_free(filename);
 
 	/* Read internal data */
 	action->name = g_settings_get_string(action->settings, "name");

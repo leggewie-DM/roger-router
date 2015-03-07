@@ -28,6 +28,7 @@
 #include <libroutermanager/gstring.h>
 #include <libroutermanager/address-book.h>
 #include <libroutermanager/router.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include "config.h"
@@ -503,7 +504,7 @@ struct address_book evolution_book = {
 
 void impl_activate(PeasActivatable *plugin)
 {
-	ebook_settings = g_settings_new("org.tabos.roger.plugins.evolution");
+	ebook_settings = rm_settings_plugin_new("org.tabos.roger.plugins.evolution", "evolution");
 
 	ebook_read_book();
 

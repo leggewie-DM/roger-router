@@ -451,7 +451,7 @@ void journal_add_contact(struct call *call)
 	gboolean new_entry = FALSE;
 
 	gtk_window_set_title(GTK_WINDOW(add_dialog), _("Add entry"));
-	gtk_window_set_position(GTK_WINDOW(add_dialog), GTK_WIN_POS_CENTER);
+	gtk_window_set_transient_for(GTK_WINDOW(add_dialog), GTK_WINDOW(journal_win));
 
 	grid = gtk_grid_new();
 	content = gtk_dialog_get_content_area(GTK_DIALOG(add_dialog));
@@ -481,7 +481,7 @@ void journal_add_contact(struct call *call)
 		} else {
 			contact_add_address(call->remote, "", "", call->remote->city);
 		}
-		contact_editor(call->remote);
+		contact_editor(call->remote, journal_win);
 	} else {
 		gtk_clipboard_set_text(gtk_clipboard_get(GDK_NONE), call->remote->number, -1);
 		contacts();
@@ -1417,7 +1417,6 @@ GtkWidget *journal_window(GApplication *app, GFile *file)
 	gtk_widget_show_all(header_menu);
 
 	gtk_container_add(GTK_CONTAINER(scrolled), journal_view);
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(journal_view), TRUE);
 
 	gtk_grid_attach(GTK_GRID(grid), scrolled, 0, 2, 5, 1);
 
@@ -1436,9 +1435,7 @@ GtkWidget *journal_window(GApplication *app, GFile *file)
 	g_signal_connect(G_OBJECT(journal_win), "configure-event", G_CALLBACK(journal_configure_event_cb), NULL);
 	g_signal_connect(G_OBJECT(journal_win), "window-state-event", G_CALLBACK(journal_window_state_event_cb), NULL);
 
-	//gtk_window_set_hide_titlebar_when_maximized(GTK_WINDOW(journal_win), TRUE);
 	gtk_widget_hide_on_delete(journal_win);
-	//gtk_window_set_has_resize_grip(GTK_WINDOW(journal_win), FALSE);
 
 	filter_box_changed(GTK_COMBO_BOX(journal_filter_box), NULL);
 

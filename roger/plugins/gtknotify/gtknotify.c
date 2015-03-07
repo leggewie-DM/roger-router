@@ -32,6 +32,7 @@
 #include <libroutermanager/profile.h>
 #include <libroutermanager/lookup.h>
 #include <libroutermanager/gstring.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include <roger/application.h>
@@ -60,15 +61,12 @@ static gchar **selected_incoming_numbers = NULL;
 static void notify_accept_clicked_cb(GtkWidget *notify, gpointer user_data)
 {
 	struct connection *connection = user_data;
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
-
-	/** Ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	struct contact *contact;
 
 	g_assert(connection != NULL);
+
+	/** Ask for contact information */
+	contact = contact_find_by_number(connection->remote_number);
 
 	gtk_widget_destroy(connection->notification);
 	connection->notification = NULL;
@@ -168,8 +166,7 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 	GtkWidget *contact_street_label;
 	GtkWidget *city_label;
 	GtkWidget *contact_city_label;
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
+	struct contact *contact;
 	gchar **numbers = NULL;
 	gchar *tmp;
 	gint count;
@@ -235,9 +232,7 @@ void notification_gtk_connection_notify_cb(AppObject *obj, struct connection *co
 	}
 
 	/** Ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	contact = contact_find_by_number(connection->remote_number);
 
 	notify = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
@@ -423,7 +418,7 @@ void impl_activate(PeasActivatable *plugin)
 {
 	RouterManagerNotificationGtkPlugin *notify_plugin = ROUTERMANAGER_NOTIFICATION_GTK_PLUGIN(plugin);
 
-	notification_gtk_settings = g_settings_new("org.tabos.roger.plugins.gtknotify");
+	notification_gtk_settings = rm_settings_plugin_new("org.tabos.roger.plugins.gtknotify", "gtknotify");
 
 	gchar **incoming_numbers = g_settings_get_strv(notification_gtk_settings, "incoming-numbers");
 	gchar **outgoing_numbers = g_settings_get_strv(notification_gtk_settings, "outgoing-numbers");

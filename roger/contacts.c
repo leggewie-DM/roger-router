@@ -42,17 +42,13 @@ static GtkWidget *contacts_window_grid = NULL;
 
 void dial_clicked_cb(GtkWidget *button, gpointer user_data)
 {
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
+	struct contact *contact;
 	gchar *full_number;
 	gchar *number = user_data;
 
 	full_number = call_full_number(number, FALSE);
 
-	/** Ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = full_number;
-	emit_contact_process(contact);
+	contact = contact_find_by_number(full_number);
 
 	app_show_phone_window(contact);
 	g_free(full_number);
@@ -367,7 +363,7 @@ void button_add_clicked_cb(GtkWidget *button, gpointer user_data)
 	struct contact *contact = g_slice_new0(struct contact);
 
 	contact->name = g_strdup("");
-	contact_editor(contact);
+	contact_editor(contact, contacts_window);
 
 	gtk_list_store_clear(list_store);
 	contacts_fill_list(list_store, NULL);
@@ -387,7 +383,7 @@ void button_edit_clicked_cb(GtkWidget *button, gpointer user_data)
 		GtkListStore *list_store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(view)));
 
 		gtk_tree_model_get(model, &iter, 2, &contact, -1);
-		contact_editor(contact);
+		contact_editor(contact, contacts_window);
 
 		gtk_list_store_clear(list_store);
 		contacts_fill_list(list_store, NULL);

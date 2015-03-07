@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce configure.
 
 m4_define([roger_major], [1])
 m4_define([roger_minor], [8])
-m4_define([roger_micro], [9])
+m4_define([roger_micro], [10])
 
 m4_define([roger_version],[roger_major.roger_minor.roger_micro])
 
@@ -154,26 +154,6 @@ case "$with_fax_spooler_type" in
 	;;
 esac
 
-AC_ARG_WITH([headerbar],
-	[AS_HELP_STRING([--with-headerbar=@<:@ARG@:>@],
-		[whether journal shoudl make use of GtkHeaderBar (possible values: no, yes) @<:@default=no@:>@])],
-	[],
-	[with_headerbar=no])
-
-AC_MSG_CHECKING(for headerbar)
-case "$with_headerbar" in
-	yes)
-		AC_DEFINE(USE_HEADERBAR, 1, [Use headerbar])
-		AC_MSG_RESULT([Using GtkHeaderBar])
-	;;
-	no)
-		AC_MSG_RESULT([Using statusbar])
-	;;
-	*)
-		AC_MSG_ERROR([Invalid option $with_headerbar])
-	;;
-esac
-
 dnl *******************************************************************
 dnl CUPS backend is optional
 dnl *******************************************************************
@@ -208,6 +188,14 @@ AS_IF([test "x$with_cups" != xsuper],
 
 AC_MSG_RESULT($with_cups)
 AM_CONDITIONAL(WITH_CUPS, test "x$with_cups" != "xno")
+
+dnl *******************************************************************
+dnl Check if we can support gtkstatusicon plugin
+dnl *******************************************************************
+AC_MSG_CHECKING(for statusicon support)
+AS_IF($PKG_CONFIG --atleast-version=3.13 gtk+-3.0, [with_statusicon=no], [with_statusicon=yes])
+AC_MSG_RESULT($with_statusicon)
+AM_CONDITIONAL(WITH_STATUSICON, test "x$with_statusicon" != "xno")
 
 dnl *******************************************************************
 dnl Check for cups backend directory if cups is found
@@ -622,6 +610,8 @@ AC_MSG_RESULT($with_appindicator3)
 
 AM_CONDITIONAL(WITH_APPINDICATOR3, test "x$with_appindicator3" != "xno")
 
+AM_CONDITIONAL(WITH_GNOTIFICATION, false)
+
 AC_ARG_ENABLE(werror,
 	AS_HELP_STRING([--disable-werror], [don't use gcc's -Werror option when building]))
 
@@ -682,6 +672,10 @@ AC_CONFIG_FILES([
     roger/plugins/thunderbird/data/Makefile
     roger/plugins/kwallet/Makefile
     roger/plugins/keychain/Makefile
+    roger/plugins/gnotification/Makefile
+    roger/plugins/gnotification/data/Makefile
+    roger/images/Makefile
+    roger/images/scalable/Makefile
     cups-backend/Makefile
     macosx/roger.plist
     macosx/package
