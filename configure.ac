@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce configure.
 
 m4_define([roger_major], [1])
 m4_define([roger_minor], [8])
-m4_define([roger_micro], [10])
+m4_define([roger_micro], [11])
 
 m4_define([roger_version],[roger_major.roger_minor.roger_micro])
 
@@ -193,7 +193,7 @@ dnl *******************************************************************
 dnl Check if we can support gtkstatusicon plugin
 dnl *******************************************************************
 AC_MSG_CHECKING(for statusicon support)
-AS_IF($PKG_CONFIG --atleast-version=3.13 gtk+-3.0, [with_statusicon=no], [with_statusicon=yes])
+AS_IF($PKG_CONFIG --atleast-version=3.16 gtk+-3.0, [with_statusicon=no], [with_statusicon=yes])
 AC_MSG_RESULT($with_statusicon)
 AM_CONDITIONAL(WITH_STATUSICON, test "x$with_statusicon" != "xno")
 
@@ -675,6 +675,11 @@ AC_CONFIG_FILES([
     roger/plugins/gnotification/Makefile
     roger/plugins/gnotification/data/Makefile
     roger/images/Makefile
+    roger/images/16x16/Makefile
+    roger/images/22x22/Makefile
+    roger/images/24x24/Makefile
+    roger/images/32x32/Makefile
+    roger/images/48x48/Makefile
     roger/images/scalable/Makefile
     cups-backend/Makefile
     macosx/roger.plist

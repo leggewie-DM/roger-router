@@ -48,9 +48,6 @@
 #include <roger/application.h>
 
 static GSList *phone_active_connections = NULL;
-#if GTK_CHECK_VERSION(3,10,0)
-static gboolean use_header_bar = FALSE;
-#endif
 
 static GtkWidget *phone_window = NULL;
 
@@ -115,7 +112,7 @@ static gboolean phone_session_timer_cb(gpointer data)
 	snprintf(buf, sizeof(buf), _("Connection: %s | Time: %s"), state->phone_status_text, time_diff);
 
 #if GTK_CHECK_VERSION(3, 10, 0)
-	if (use_header_bar) {
+	if (state->use_header_bar) {
 		gtk_header_bar_set_subtitle(GTK_HEADER_BAR(state->phone_status_label), buf);
 	} else
 #endif
@@ -987,10 +984,10 @@ void app_show_phone_window(struct contact *contact)
 	g_signal_connect(window, "delete_event", G_CALLBACK(phone_window_delete_event_cb), state);
 
 	grid = gtk_grid_new();
-	gtk_widget_set_margin(grid, 12, 12, 12, 12);
+	gtk_widget_set_margin(grid, 12, 12, 12, 6);
 
 	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(grid), 16);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
 
 	/* Yes, we start at pos_y = 1, pos_y = 0 will be set below */
@@ -1004,14 +1001,9 @@ void app_show_phone_window(struct contact *contact)
 	gtk_grid_attach(GTK_GRID(grid), state->control_frame, 1, pos_y, 1, 1);
 
 #if GTK_CHECK_VERSION(3,10,0)
-	gboolean use_header = FALSE;
+	state->use_header_bar = g_settings_get_boolean(app_settings, "use-header");
 
-#if GTK_CHECK_VERSION(3,12,0)
-	g_object_get(gtk_settings_get_default(), "gtk-dialogs-use-header", &use_header, NULL);
-#endif
-	use_header_bar = use_header || g_settings_get_boolean(app_settings, "use-header");
-
-	if (use_header_bar) {
+	if (state->use_header_bar) {
 		/* Create header bar and set it to window */
 		GtkWidget *header = gtk_header_bar_new();
 

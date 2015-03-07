@@ -74,15 +74,12 @@ struct capi_connection *fax_dial(gchar *tiff, const gchar *trg_no)
 
 	target = call_canonize_number(trg_no);
 
-	if (!cip) {
-		/* CIP is not set in the settings, try to guess it based on the controller id */
-		if (controller >= 4) {
-			cip = SPEECH_CIP;
-			g_debug("Using 'Analog Fax' id");
-		} else {
-			cip = FAX_CIP;
-			g_debug("Using 'ISDN Fax' id");
-		}
+	if (cip == 1) {
+		cip = FAX_CIP;
+		g_debug("Using 'ISDN Fax' id");
+	} else {
+		cip = SPEECH_CIP;
+		g_debug("Using 'Analog Fax' id");
 	}
 
 	if (g_settings_get_boolean(profile->settings, "fax-sff")) {
@@ -116,7 +113,7 @@ struct capi_connection *phone_dial(const gchar *trg_no, gboolean suppress)
 
 	target = call_canonize_number(trg_no);
 
-	connection = phone_call(controller, src_no, trg_no, suppress);
+	connection = phone_call(controller, src_no, target, suppress);
 
 	g_free(target);
 

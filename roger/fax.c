@@ -32,6 +32,7 @@
 #include <roger/uitools.h>
 #include <roger/print.h>
 #include <roger/fax.h>
+#include <roger/application.h>
 
 static void capi_connection_established_cb(AppObject *object, struct capi_connection *connection, gpointer user_data)
 {
@@ -51,6 +52,8 @@ static void capi_connection_terminated_cb(AppObject *object, struct capi_connect
 	struct fax_ui *fax_ui = state->priv;
 	struct profile *profile = profile_get_active();
 	int reason;
+
+	g_debug("[%s]: connection %p, fax_connection %p", __FUNCTION__, connection, fax_ui ? fax_ui->fax_connection : NULL);
 
 	if (fax_ui->fax_connection != NULL && fax_ui->fax_connection != connection) {
 		return;
@@ -78,13 +81,14 @@ static void capi_connection_terminated_cb(AppObject *object, struct capi_connect
 			g_debug("Fax transfer failed");
 		}
 		}
+
+		g_print("Setting to disconnect");
+		snprintf(state->phone_status_text, sizeof(state->phone_status_text), _("Disconnected"));
+
+		phone_remove_connection(connection);
+		phone_remove_timer(state);
+		fax_ui->fax_connection = NULL;
 	}
-
-	snprintf(state->phone_status_text, sizeof(state->phone_status_text), _("Disconnected"));
-
-	phone_remove_connection(connection);
-	phone_remove_timer(state);
-	fax_ui->fax_connection = NULL;
 }
 
 gboolean fax_update_ui(gpointer user_data)
@@ -258,6 +262,8 @@ void app_show_fax_window(gchar *fax_file)
 	frame = gtk_frame_new(_("Information"));
 
 	frame_grid = gtk_grid_new();
+	gtk_widget_set_margin(frame_grid, 5, 0, 5, 5);
+
 	/* Set standard spacing to 5 */
 	gtk_grid_set_row_spacing(GTK_GRID(frame_grid), 5);
 	gtk_grid_set_column_spacing(GTK_GRID(frame_grid), 5);
@@ -298,8 +304,26 @@ void app_show_fax_window(gchar *fax_file)
 
 	gtk_container_add(GTK_CONTAINER(frame), frame_grid);
 
-	state->phone_status_label = gtk_label_new(_("Connection: Idle | Duration: 00:00:00"));
-	gtk_grid_attach(GTK_GRID(grid), state->phone_status_label, 0, 2, 3, 1);
+#if GTK_CHECK_VERSION(3,10,0)
+	state->use_header_bar = g_settings_get_boolean(app_settings, "use-header");
+
+	if (state->use_header_bar) {
+		/* Create header bar and set it to window */
+		GtkWidget *header = gtk_header_bar_new();
+
+		gtk_widget_set_hexpand(header, TRUE);
+		gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header), TRUE);
+		gtk_header_bar_set_title(GTK_HEADER_BAR (header), _("Fax"));
+		gtk_header_bar_set_subtitle(GTK_HEADER_BAR (header), _("Connection: Idle | Time: 00:00:00"));
+		gtk_window_set_titlebar((GtkWindow *)(window), header);
+
+		state->phone_status_label = header;
+	} else
+#endif
+	{
+		state->phone_status_label = gtk_label_new(_("Connection: Idle | Duration: 00:00:00"));
+		gtk_grid_attach(GTK_GRID(grid), state->phone_status_label, 0, 2, 3, 1);
+	}
 
 	/* We set the dial frame last, so that all other widgets are in place */
 	frame = phone_dial_frame(window, NULL, state);

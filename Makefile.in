@@ -437,6 +437,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = libroutermanager roger roger-cli po doc $(am__append_1)
+AM_DISTCHECK_CONFIGURE_FLAGS = \
+	--disable-werror
+
 EXTRA_DIST = \
 	autogen.sh \
 	roger.desktop.in \
