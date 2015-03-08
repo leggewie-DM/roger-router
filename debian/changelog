@@ -1,3 +1,19 @@
+roger-router (1.8.9-3) experimental; urgency=medium
+
+  * release to experimental while jessie is frozen
+  * do not build the experimental (!) cups backend. Closes: #774116
+    Upstream uses a very funny (NOT!) semantics to their make-switches.
+    Who would expect that "--with-cups=yes" actually DISABLES a working
+    cups support?
+    Personally, I was unable to verify this fix but Dieter Schäfer
+    kindly provided confirmation that the test packages I had provided
+    are now working fine for sending faxes. Thanks!
+  * control: drop unused substvar from ffgtk transitional package stanza
+  * rules: stop shipping install-fax.sh file. Closes: #772402
+  * README.Debian: add some information on how to send a fax
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Sun, 08 Mar 2015 21:32:16 +0800
+
 roger-router (1.8.9-2) unstable; urgency=low
 
   * copyright: add copyright information for win32/printer/ghostpdf.ppd
