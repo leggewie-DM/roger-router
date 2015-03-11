@@ -13,6 +13,10 @@ set -e
 
 case "$1" in
     purge)
+        if which lpadmin >/dev/null
+        then
+            lpadmin -x "Roger-Router-Fax"
+        fi
         rm -rf /var/spool/roger
     ;;
 
