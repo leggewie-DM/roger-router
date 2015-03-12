@@ -1,3 +1,12 @@
+roger-router (1.8.9-4) experimental; urgency=low
+
+  * postrm: delete Roger Router CUPS Fax printer upon package purge
+  * README: add information what needs to be done after firmware updates
+    certain functions, such as fax support, will be reset to being
+    disabled every time a new firmware is installed
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Thu, 12 Mar 2015 15:25:09 +0800
+
 roger-router (1.8.9-3) experimental; urgency=medium
 
   * release to experimental while jessie is frozen
