@@ -8,15 +8,15 @@ http://forum.ubuntuusers.de/topic/roger-router-roger/
 http://en.tabos.org/installation-prequel
 
 If you want to use the incoming call notification you will have to enable
-it on your fritzbox with: #96*5*
+it on your fritzbox with: #96*5*  If you want to use the capifax plugin
+you will have to enable capi-over-tcp on your fritzbox with: #96*3*  Both
+of these settings will be reset to their default value of "off" whenever
+you update the router firmware.  Please reenable them as necessary.
 
 Please note, quick reconnect & display external ip in tooltip for Fritz!Box
 needs active UPnP support!
 
 = Fax support =
-
-If you want to use the capifax plugin you will have to enable capi-over-tcp
-on your fritzbox with: #96*3*
 
 Roger installs a Cups printer.  To be able to fax, you either need to use
 roger_cli where you specify all necessary information including the number
