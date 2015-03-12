@@ -11,7 +11,7 @@ If you want to use the incoming call notification you will have to enable
 it on your fritzbox with: #96*5*  If you want to use the capifax plugin
 you will have to enable capi-over-tcp on your fritzbox with: #96*3*  Both
 of these settings will be reset to their default value of "off" whenever
-you update the router firmware.  Please reenable them as necessary.
+you update the router firmware.  Please re-enable them as necessary.
 
 Please note, quick reconnect & display external ip in tooltip for Fritz!Box
 needs active UPnP support!
