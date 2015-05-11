@@ -1,3 +1,10 @@
+roger-router (1.8.9-5) unstable; urgency=low
+
+  * release to unstable
+  * README: fix minor spelling mistake
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Mon, 11 May 2015 11:43:24 +0200
+
 roger-router (1.8.9-4) experimental; urgency=low
 
   * postrm: delete Roger Router CUPS Fax printer upon package purge
