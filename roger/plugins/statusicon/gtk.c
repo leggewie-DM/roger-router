@@ -25,6 +25,7 @@
 #include <libroutermanager/plugins.h>
 #include <libroutermanager/profile.h>
 #include <libroutermanager/routermanager.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/about.h>
 #include <roger/application.h>
@@ -33,6 +34,8 @@
 #include <roger/phone.h>
 #include <roger/pref.h>
 #include <roger/uitools.h>
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 #define MAX_LASTCALLS 5
 
@@ -83,7 +86,7 @@ GtkWidget *statusicon_menu_functions(void)
  */
 void statusicon_dial_number_cb(GtkMenuItem *item, gpointer user_data)
 {
-	app_show_phone_window(user_data);
+	app_show_phone_window(user_data, NULL);
 }
 
 /**
@@ -163,9 +166,9 @@ GtkWidget *statusicon_menu_last_calls(void)
 
 void statusicon_activate_cb(void)
 {
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(statusicon_settings, "default-icon"), ".png", NULL);
-	gtk_status_icon_set_from_pixbuf(statusicon, gdk_pixbuf_new_from_file(path, NULL));
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(statusicon_settings, "default-icon"), NULL);
+	gtk_status_icon_set_from_icon_name(statusicon, iconname);
+	g_free(iconname);
 
 	gtk_widget_set_visible(GTK_WIDGET(journal_win), !gtk_widget_get_visible(GTK_WIDGET(journal_win)));
 }
@@ -177,6 +180,11 @@ void statusicon_journal_cb(void)
 	} else {
 		statusicon_activate_cb();
 	}
+}
+
+void statusicon_phone_cb(GtkWidget *widget, gpointer user_data)
+{
+	app_show_phone_window(NULL, NULL);
 }
 
 void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint activate_time, gpointer user_data)
@@ -200,7 +208,7 @@ void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint act
 	/* Phone */
 	item = gtk_menu_item_new_with_label(_("Phone"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(app_show_phone_window), NULL);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(statusicon_phone_cb), NULL);
 
 	/* Last calls */
 	item = gtk_menu_item_new_with_label(_("Last calls"));
@@ -262,12 +270,12 @@ void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint act
  */
 void statusicon_connection_notify_cb(AppObject *obj, struct connection *connection, gpointer unused_pointer)
 {
-	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISS);
-	if (connection->type == CONNECTION_TYPE_MISS) {
+	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISSED);
+	if (connection->type == CONNECTION_TYPE_MISSED) {
 		g_debug("Setting missed icon");
-		gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(statusicon_settings, "notify-icon"), ".png", NULL);
-		gtk_status_icon_set_from_pixbuf(statusicon, gdk_pixbuf_new_from_file(path, NULL));
-		g_free(path);
+		gchar *iconname = g_strconcat("roger-", g_settings_get_string(statusicon_settings, "notify-icon"), NULL);
+		gtk_status_icon_set_from_icon_name(statusicon, iconname);
+		g_free(iconname);
 	}
 }
 
@@ -284,9 +292,9 @@ void statusicon_combobox_default_changed_cb(GtkComboBox *widget, gpointer user_d
 	g_settings_set_string(statusicon_settings, "default-icon", gtk_combo_box_get_active_id(GTK_COMBO_BOX(combo_box)));
 
 	/* Update statusicon icon */
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(statusicon_settings, "default-icon"), ".png", NULL);
-	gtk_status_icon_set_from_pixbuf(statusicon, gdk_pixbuf_new_from_file(path, NULL));
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(statusicon_settings, "default-icon"), NULL);
+	gtk_status_icon_set_from_icon_name(statusicon, iconname);
+	g_free(iconname);
 }
 
 /**
@@ -310,9 +318,9 @@ static gboolean add_statusicon(gpointer user_data)
 	g_signal_connect(G_OBJECT(statusicon), "popup-menu", G_CALLBACK(statusicon_popup_menu_cb), NULL);
 	g_signal_connect(G_OBJECT(statusicon), "activate", G_CALLBACK(statusicon_activate_cb), NULL);
 
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(statusicon_settings, "default-icon"), ".png", NULL);
-	gtk_status_icon_set_from_pixbuf(statusicon, gdk_pixbuf_new_from_file(path, NULL));
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(statusicon_settings, "default-icon"), NULL);
+	gtk_status_icon_set_from_icon_name(statusicon, iconname);
+	g_free(iconname);
 
 	gtk_status_icon_set_tooltip_text(statusicon, _("Roger Router"));
 	gtk_status_icon_set_visible(statusicon, TRUE);
@@ -326,7 +334,7 @@ void impl_activate(PeasActivatable *plugin)
 
 	journal_set_hide_on_quit(TRUE);
 
-	statusicon_settings = g_settings_new("org.tabos.roger.plugins.statusicon");
+	statusicon_settings = rm_settings_plugin_new("org.tabos.roger.plugins.statusicon", "statusicon");
 
 	/* Connect to "call-notify" signal */
 	statusicon_plugin = ROUTERMANAGER_STATUSICON_PLUGIN(plugin);
@@ -357,11 +365,8 @@ void impl_deactivate(PeasActivatable *plugin)
 		gtk_widget_show(GTK_WIDGET(journal_win));
 	}
 
-//#if !GTK_CHECK_VERSION(3, 7, 0)
-	/* This is currently broken in GTK 3.8.0 - for now the application must be restart to remove the status icon..... */
 	gtk_status_icon_set_visible(statusicon, FALSE);
 	g_object_unref(statusicon);
-//#endif
 
 	statusicon = NULL;
 }
@@ -421,3 +426,5 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 
 	return group;
 }
+
+G_GNUC_END_IGNORE_DEPRECATIONS

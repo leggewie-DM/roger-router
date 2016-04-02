@@ -71,8 +71,9 @@ gboolean fritzbox_login_04_74(struct profile *profile)
 	g_free(url);
 
 	soup_session_send_message(soup_session_sync, msg);
-	if (msg->status_code != 200) {
+	if (msg->status_code != 200 || !msg->response_body->length) {
 		g_debug("Received status code: %d", msg->status_code);
+		g_debug("Message length: %" G_GOFFSET_FORMAT, msg->response_body->length);
 		g_object_unref(msg);
 
 		g_timer_destroy(profile->router_info->session_timer);
@@ -90,9 +91,25 @@ gboolean fritzbox_login_04_74(struct profile *profile)
 
 	/* <iswriteaccess>X</iswriteaccess> */
 	writeaccess = xml_extract_tag(data, "iswriteaccess");
+	if (writeaccess == NULL) {
+		g_debug("writeaccess is NULL");
+		g_object_unref(msg);
+
+		g_timer_destroy(profile->router_info->session_timer);
+		profile->router_info->session_timer = NULL;
+		return FALSE;
+	}
 
 	/* <Challenge>X</Challenge> */
 	challenge = xml_extract_tag(data, "Challenge");
+	if (challenge == NULL) {
+		g_debug("challenge is NULL");
+		g_object_unref(msg);
+
+		g_timer_destroy(profile->router_info->session_timer);
+		profile->router_info->session_timer = NULL;
+		return FALSE;
+	}
 
 	g_object_unref(msg);
 
@@ -370,7 +387,9 @@ void fritzbox_extract_numbers_04_74(struct profile *profile, const gchar *data)
 
 	numbers = g_malloc(sizeof(gchar *) * (g_slist_length(number_list) + 1));
 	for (list = number_list; list; list = list->next) {
-		g_debug("Adding MSN '%s'", call_scramble_number(list->data));
+		gchar *scramble = call_scramble_number(list->data);
+		g_debug("Adding MSN '%s'", scramble);
+		g_free(scramble);
 		numbers[counter++] = g_strdup(list->data);
 	}
 	numbers[counter] = NULL;
@@ -431,7 +450,7 @@ gboolean fritzbox_get_settings_04_74(struct profile *profile)
 
 	fritzbox_extract_numbers_04_74(profile, data);
 
-	for (index = 0; index < NUM_PHONE_PORTS; index++) {
+	for (index = 0; index < PORT_MAX; index++) {
 		gchar *value;
 
 		value = xml_extract_input_value(data, fritzbox_phone_ports[index].name);
@@ -528,8 +547,10 @@ gboolean fritzbox_get_settings_04_74(struct profile *profile)
 	gchar *fax_msn = xml_extract_input_value(data, "telcfg:settings/FaxMSN0");
 	if (fax_msn) {
 		gchar *formated_number = call_format_number(profile, fax_msn, NUMBER_FORMAT_INTERNATIONAL_PLUS);
+		gchar *scramble = call_scramble_number(fax_msn);
 
-		g_debug("Fax number: '%s'", call_scramble_number(fax_msn));
+		g_debug("Fax number: '%s'", scramble);
+		g_free(scramble);
 		g_settings_set_string(profile->settings, "fax-number", fax_msn);
 
 		g_settings_set_string(profile->settings, "fax-ident", formated_number);
@@ -583,10 +604,8 @@ gboolean fritzbox_get_settings_04_74(struct profile *profile)
 	if (dialport) {
 		gint port = atoi(dialport);
 		gint phone_port = fritzbox_find_phone_port(port);
-		gchar tmp[10];
 		g_debug("Dial port: %s, phone_port: %d", dialport, phone_port);
-		snprintf(tmp, sizeof(tmp), "%d", phone_port);
-		g_settings_set_string(profile->settings, "port", tmp);
+		router_set_phone_port(profile, phone_port);
 	}
 	g_free(dialport);
 
@@ -619,6 +638,12 @@ void fritzbox_journal_04_74_cb(SoupSession *session, SoupMessage *msg, gpointer 
 
 	/* Load and add voicebox */
 	journal = fritzbox_load_voicebox(journal);
+
+	/* Load fax reports */
+	journal = router_load_fax_reports(profile, journal);
+
+	/* Load voice records */
+	journal = router_load_voice_records(profile, journal);
 
 	router_process_journal(journal);
 

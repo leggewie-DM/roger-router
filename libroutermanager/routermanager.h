@@ -24,6 +24,8 @@
 #include "config.h"
 #endif
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 #define _(text) gettext(text)
@@ -31,6 +33,8 @@ G_BEGIN_DECLS
 #define ROUTERMANAGER_SCHEME "org.tabos.routermanager"
 #define ROUTERMANAGER_SCHEME_PROFILE "org.tabos.routermanager.profile"
 #define ROUTERMANAGER_SCHEME_PROFILE_ACTION "org.tabos.routermanager.profile.action"
+
+#define ROUTERMANAGER_PATH "/org/tabos/routermanager/"
 
 #define RM_ERROR rm_print_error_quark()
 

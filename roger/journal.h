@@ -38,7 +38,7 @@ enum {
 	JOURNAL_COL_CALL_PTR,
 };
 
-GtkWidget *journal_window(GApplication *app, GFile *file);
+void journal_window(GApplication *app);
 void journal_set_visible(gboolean state);
 GdkPixbuf *journal_get_call_icon(gint type);
 
@@ -50,6 +50,7 @@ void journal_set_hide_on_start(gboolean hide);
 GSList *journal_get_list(void);
 
 GtkWidget *journal_get_window(void);
+gboolean roger_uses_headerbar(void);
 
 G_END_DECLS
 

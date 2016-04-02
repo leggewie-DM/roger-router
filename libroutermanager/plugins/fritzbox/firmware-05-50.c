@@ -39,54 +39,6 @@
 #include "firmware-05-50.h"
 
 /**
- * \brief Extract XML Tags: <TAG>VALUE</TAG>
- * \param data data to parse
- * \param tag tag to extract
- * \return tag values
- */
-gchar **xml_extract_tags(const gchar *data, gchar *tag_start, gchar *tag_end)
-{
-	gchar *regex_str = g_strdup_printf("<%s>[^<]*</%s>", tag_start, tag_end);
-	GRegex *regex = NULL;
-	GError *error = NULL;
-	GMatchInfo *match_info;
-	gchar **entries = NULL;
-	gint index = 0;
-
-	regex = g_regex_new(regex_str, 0, 0, &error);
-	g_assert(regex != NULL);
-
-	g_regex_match(regex, data, 0, &match_info);
-
-	while (match_info && g_match_info_matches(match_info)) {
-		gint start;
-		gint end;
-		gboolean fetched = g_match_info_fetch_pos(match_info, 0, &start, &end);
-
-		if (fetched == TRUE) {
-			gchar *tag_start_pos = strchr(data + start, '>');
-			gchar *tag_end_pos = strchr(tag_start_pos + 1, '<');
-			gint entry_size = tag_end_pos - tag_start_pos - 1;
-
-			entries = g_realloc(entries, (index + 2) * sizeof(gchar *));
-			entries[index] = g_malloc0(entry_size + 1);
-			strncpy(entries[index], tag_start_pos + 1, entry_size);
-			entries[index + 1] = NULL;
-			index++;
-		}
-
-		if (g_match_info_next(match_info, NULL) == FALSE) {
-			break;
-		}
-	}
-
-	g_match_info_free(match_info);
-	g_free(regex_str);
-
-	return entries;
-}
-
-/**
  * \brief Login function (>= FRITZ!OS 5.50)
  * \param profile profile information structure
  * \return error code
@@ -354,6 +306,7 @@ gboolean fritzbox_get_fax_information_05_50(struct profile *profile)
 	const gchar *data;
 	gsize read;
 	gchar *url;
+	gchar *scramble;
 
 	url = g_strdup_printf("http://%s/cgi-bin/webcm", router_get_host(profile));
 	msg = soup_form_request_new(SOUP_METHOD_POST, url,
@@ -380,7 +333,9 @@ gboolean fritzbox_get_fax_information_05_50(struct profile *profile)
 
 	gchar *header = xml_extract_input_value(data, "telcfg:settings/FaxKennung");
 	if (header) {
-		g_debug("Fax-Header: '%s'", call_scramble_number(header));
+		scramble = call_scramble_number(header);
+		g_debug("Fax-Header: '%s'", scramble);
+		g_free(scramble);
 		g_settings_set_string(profile->settings, "fax-header", header);
 		g_free(header);
 	}
@@ -396,7 +351,9 @@ gboolean fritzbox_get_fax_information_05_50(struct profile *profile)
 
 		formated_number = call_format_number(profile, fax_msn, NUMBER_FORMAT_INTERNATIONAL_PLUS);
 
-		g_debug("Fax number: '%s'", call_scramble_number(fax_msn));
+		scramble = call_scramble_number(fax_msn);
+		g_debug("Fax number: '%s'", scramble);
+		g_free(scramble);
 
 		g_settings_set_string(profile->settings, "fax-number", fax_msn);
 
@@ -435,6 +392,7 @@ gboolean fritzbox_get_fax_information_06_00(struct profile *profile)
 	const gchar *data;
 	gsize read;
 	gchar *url;
+	gchar *scramble;
 
 	url = g_strdup_printf("http://%s/fon_devices/fax_send.lua", router_get_host(profile));
 	msg = soup_form_request_new(SOUP_METHOD_GET, url,
@@ -457,7 +415,9 @@ gboolean fritzbox_get_fax_information_06_00(struct profile *profile)
 
 	gchar *header = xml_extract_list_value(data, "telcfg:settings/FaxKennung");
 	if (header) {
-		g_debug("Fax-Header: '%s'", call_scramble_number(header));
+		scramble = call_scramble_number(header);
+		g_debug("Fax-Header: '%s'", scramble);
+		g_free(scramble);
 		g_settings_set_string(profile->settings, "fax-header", header);
 		g_free(header);
 	}
@@ -473,7 +433,9 @@ gboolean fritzbox_get_fax_information_06_00(struct profile *profile)
 
 		formated_number = call_format_number(profile, fax_msn, NUMBER_FORMAT_INTERNATIONAL_PLUS);
 
-		g_debug("Fax number: '%s'", call_scramble_number(fax_msn));
+		scramble = call_scramble_number(fax_msn);
+		g_debug("Fax number: '%s'", scramble);
+		g_free(scramble);
 
 		g_settings_set_string(profile->settings, "fax-number", fax_msn);
 
@@ -483,11 +445,11 @@ gboolean fritzbox_get_fax_information_06_00(struct profile *profile)
 	g_free(fax_msn);
 
 	g_settings_set_string(profile->settings, "fax-volume", "");
-	gchar *active = xml_extract_list_value(data, "telcfg:settings/FaxMailActive");
-	if (active) {
-		gint fax_mail_active = atoi(&active[0]);
+	gchar *mail_active = xml_extract_list_value(data, "telcfg:settings/FaxMailActive");
+	if (mail_active) {
+		gint fax_mail_active = atoi(&mail_active[0]);
 
-		if ((fax_mail_active == 2 || fax_mail_active == 3)) {
+		if (fax_mail_active == 3) {
 			gchar *volume;
 			g_object_unref(msg);
 
@@ -516,11 +478,9 @@ gboolean fritzbox_get_fax_information_06_00(struct profile *profile)
 			if (volume) {
 				g_debug("Fax-Storage-Volume: '%s'", volume);
 				g_settings_set_string(profile->settings, "fax-volume", volume);
-			} else {
-				g_settings_set_string(profile->settings, "fax-volume", "");
 			}
 
-			g_free(active);
+			g_free(mail_active);
 		}
 	}
 
@@ -569,13 +529,21 @@ gboolean fritzbox_get_settings_05_50(struct profile *profile)
 	g_assert(data != NULL);
 
 	gchar **numbers = xml_extract_tags(data, "td title=\"[^\"]*\"", "td");
-	if (g_strv_length(numbers)) {
-		gint idx;
-		for (idx = 0; idx < g_strv_length(numbers); idx++) {
-			g_debug("Adding MSN '%s'", call_scramble_number(numbers[idx]));
-		}
 
-		g_settings_set_strv(profile->settings, "numbers", (const gchar * const *)numbers);
+	if (g_strv_length(numbers)) {
+		gchar **profile_numbers = strv_remove_duplicates(numbers);
+		gint idx;
+
+		if (g_strv_length(profile_numbers)) {
+			for (idx = 0; idx < g_strv_length(profile_numbers); idx++) {
+				gchar *scramble = call_scramble_number(profile_numbers[idx]);
+				g_debug("Adding MSN '%s'", scramble);
+				g_free(scramble);
+			}
+			g_settings_set_strv(profile->settings, "numbers", (const gchar * const *)profile_numbers);
+		}
+		g_strfreev(numbers);
+
 	}
 	g_object_unref(msg);
 
@@ -602,7 +570,7 @@ gboolean fritzbox_get_settings_05_50(struct profile *profile)
 	fritzbox_detect_controller_05_50(profile, data);
 
 	/* Extract phone names */
-	for (index = 0; index < NUM_PHONE_PORTS; index++) {
+	for (index = 0; index < PORT_MAX; index++) {
 		gchar *value;
 
 		value = xml_extract_list_value(data, fritzbox_phone_ports[index].name);
@@ -710,10 +678,8 @@ gboolean fritzbox_get_settings_05_50(struct profile *profile)
 	if (dialport) {
 		gint port = atoi(dialport);
 		gint phone_port = fritzbox_find_phone_port(port);
-		gchar tmp[10];
 		g_debug("Dial port: %s, phone_port: %d", dialport, phone_port);
-		snprintf(tmp, sizeof(tmp), "%d", phone_port);
-		g_settings_set_string(profile->settings, "port", tmp);
+		router_set_phone_port(profile, phone_port);
 	}
 	g_free(dialport);
 
@@ -747,6 +713,9 @@ void fritzbox_journal_05_50_cb(SoupSession *session, SoupMessage *msg, gpointer 
 
 	/* Load fax reports */
 	journal = router_load_fax_reports(profile, journal);
+
+	/* Load voice records */
+	journal = router_load_voice_records(profile, journal);
 
 	/* Process journal list */
 	router_process_journal(journal);

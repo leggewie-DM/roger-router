@@ -30,6 +30,7 @@
 #include <libroutermanager/router.h>
 #include <libroutermanager/file.h>
 #include <libroutermanager/gstring.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include <roger/pref.h>
@@ -740,22 +741,22 @@ static void parse_person(GHashTable *map, gpointer pId) {
 
 		if (!strcmp(column, "HomePhone")) {
 			number = g_slice_new(struct phone_number);
-			number->number = g_strdup(value);
+			number->number = call_full_number(value, FALSE);
 			number->type = PHONE_NUMBER_HOME;
 			contact->numbers = g_slist_prepend(contact->numbers, number);
 		} else if (!strcmp(column, "WorkPhone")) {
 			number = g_slice_new(struct phone_number);
-			number->number = g_strdup(value);
+			number->number = call_full_number(value, FALSE);
 			number->type = PHONE_NUMBER_WORK;
 			contact->numbers = g_slist_prepend(contact->numbers, number);
 		} else if (!strcmp(column, "FaxNumber")) {
 			number = g_slice_new(struct phone_number);
-			number->number = g_strdup(value);
+			number->number = call_full_number(value, FALSE);
 			number->type = PHONE_NUMBER_FAX_HOME;
 			contact->numbers = g_slist_prepend(contact->numbers, number);
 		} else if (!strcmp(column, "CellularNumber")) {
 			number = g_slice_new(struct phone_number);
-			number->number = g_strdup(value);
+			number->number = call_full_number(value, FALSE);
 			number->type = PHONE_NUMBER_MOBILE;
 			contact->numbers = g_slist_prepend(contact->numbers, number);
 		} else if (!strcmp(column, "DisplayName")) {
@@ -981,7 +982,7 @@ void impl_activate(PeasActivatable *plugin)
 {
 	//RouterManagerThunderbirdPlugin *thunderbird_plugin = ROUTERMANAGER_THUNDERBIRD_PLUGIN(plugin);
 
-	thunderbird_settings = g_settings_new("org.tabos.roger.plugins.thunderbird");
+	thunderbird_settings = rm_settings_plugin_new("org.tabos.roger.plugins.thunderbird", "thunderbird");
 
 	table = g_hash_table_new(g_str_hash, g_str_equal);
 

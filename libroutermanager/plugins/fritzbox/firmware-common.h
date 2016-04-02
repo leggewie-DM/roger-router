@@ -69,17 +69,19 @@ struct voice_box {
 	gpointer data;
 };
 
-extern struct phone_port fritzbox_phone_ports[NUM_PHONE_PORTS];
+extern struct phone_port fritzbox_phone_ports[PORT_MAX];
 
+gchar **xml_extract_tags(const gchar *data, gchar *tag_start, gchar *tag_end);
 gchar *xml_extract_tag(const gchar *data, gchar *tag);
 gchar *xml_extract_input_value(const gchar *data, gchar *tag);
+gchar *xml_extract_input_value_r(const gchar *data, gchar *tag);
 gchar *xml_extract_list_value(const gchar *data, gchar *tag);
 gchar *html_extract_assignment(const gchar *data, gchar *tag, gboolean p);
+gchar **strv_remove_duplicates(gchar **numbers);
 gboolean fritzbox_present(struct router_info *router_info);
 gboolean fritzbox_logout(struct profile *profile, gboolean force);
 void fritzbox_read_msn(struct profile *profile, const gchar *data);
-gboolean fritzbox_dial_number(struct profile *profile, gint port, const gchar *number);
-gboolean fritzbox_hangup(struct profile *profile, gint port, const gchar *number);
+gint fritzbox_get_dialport(gint type);
 gchar *fritzbox_load_fax(struct profile *profile, const gchar *filename, gsize *len);
 gchar *fritzbox_load_voice(struct profile *profile, const gchar *filename, gsize *len);
 GSList *fritzbox_load_voicebox(GSList *journal);
@@ -89,6 +91,7 @@ gchar *fritzbox_get_ip(struct profile *profile);
 gboolean fritzbox_reconnect(struct profile *profile);
 gboolean fritzbox_delete_fax(struct profile *profile, const gchar *filename);
 gboolean fritzbox_delete_voice(struct profile *profile, const gchar *filename);
+gboolean strv_contains(const gchar *const *strv, const gchar *str);
 
 /**
  * \brief Make dots (UTF8 -> UTF16)

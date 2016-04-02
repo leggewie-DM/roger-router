@@ -26,6 +26,7 @@
 #include <libroutermanager/appobject-emit.h>
 #include <libroutermanager/routermanager.h>
 #include <libroutermanager/gstring.h>
+#include <libroutermanager/settings.h>
 
 /**
  * \brief Parse the input string and replaces templates with connection information
@@ -39,8 +40,7 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 	GRegex *number = g_regex_new("%NUMBER%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
 	GRegex *name = g_regex_new("%NAME%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
 	GRegex *company = g_regex_new("%COMPANY%", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
+	struct contact *contact;
 	gchar *tmp0;
 	gchar *tmp1;
 	gchar *tmp2;
@@ -52,14 +52,12 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 	tmp1 = g_regex_replace_literal(line, tmp0, -1, 0, connection->local_number, 0, NULL);
 
 	/** Based on connection ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	contact = contact_find_by_number(connection->remote_number);
 
 	/* Replace company template */
-	tmp2 = g_regex_replace_literal(company, tmp1, -1, 0, contact_s.company != NULL ? contact_s.company : "", 0, NULL);
+	tmp2 = g_regex_replace_literal(company, tmp1, -1, 0, contact->company != NULL ? contact->company : "", 0, NULL);
 	/* Replace name template */
-	out = g_regex_replace_literal(name, tmp2, -1, 0, contact_s.name != NULL ? contact_s.name : "", 0, NULL);
+	out = g_regex_replace_literal(name, tmp2, -1, 0, contact->name != NULL ? contact->name : "", 0, NULL);
 
 	/* Free temporary data fields */
 	g_free(tmp2);
@@ -84,8 +82,9 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 static inline gboolean action_check_number(const gchar *local_number, gchar **numbers)
 {
 	guint i;
+	guint len = g_strv_length(numbers);
 
-	for (i = 0; i < g_strv_length(numbers); i++) {
+	for (i = 0; i < len; i++) {
 		if (!strcmp(local_number, numbers[i])) {
 			return TRUE;
 		}
@@ -129,7 +128,7 @@ void action_connection_notify_cb(AppObject *object, struct connection *connectio
 		    /* Outgoing connection */
 		    ((connection->type == CONNECTION_TYPE_OUTGOING) && (action->flags & ACTION_OUTGOING_DIAL)) ||
 		    /* Incoming connection missed */
-		    ((connection->type == CONNECTION_TYPE_MISS) && (action->flags & ACTION_INCOMING_MISSED)) ||
+		    ((connection->type == CONNECTION_TYPE_MISSED) && (action->flags & ACTION_INCOMING_MISSED)) ||
 		    /* Incoming connection established */
 		    ((connection->type == (CONNECTION_TYPE_INCOMING | CONNECTION_TYPE_CONNECT)) && (action->flags & ACTION_INCOMING_BEGIN)) ||
 		    /* Outgoing connection established */
@@ -157,11 +156,7 @@ void action_connection_notify_cb(AppObject *object, struct connection *connectio
  */
 struct action *action_create(void)
 {
-	struct action *action = g_slice_new(struct action);
-
-	memset(action, 0, sizeof(struct action));
-
-	return action;
+	return g_slice_new0(struct action);
 }
 
 /**
@@ -175,6 +170,7 @@ struct action *action_create(void)
 struct action *action_modify(struct action *action, const gchar *name, const gchar *description, const gchar *exec, gchar **numbers)
 {
 	gchar *settings_path;
+	gchar *filename;
 
 	action->name = g_strdup(name);
 	action->description = g_strdup(description);
@@ -183,7 +179,9 @@ struct action *action_modify(struct action *action, const gchar *name, const gch
 
 	/* Setup action settings */
 	settings_path = g_strconcat("/org/tabos/routermanager/profile/", profile_get_active()->name, "/", name, "/", NULL);
-	action->settings = g_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path);
+	filename = g_strconcat("actions/", profile_get_active()->name, "-", name, NULL);
+	action->settings = rm_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path, filename);
+	g_free(filename);
 
 	g_settings_set_string(action->settings, "name", action->name);
 	g_settings_set_string(action->settings, "description", action->description);
@@ -219,13 +217,13 @@ void action_commit(struct profile *profile)
 	for (list = profile->action_list; list; list = list->next) {
 		struct action *current_action = list->data;
 
-		actions[counter++] = current_action->name;
+		actions[counter++] = g_strdup(current_action->name);
 	}
 	actions[counter] = NULL;
 
 	g_settings_set_strv(profile->settings, "actions", (const gchar * const *)actions);
 
-	//g_strfreev(actions);
+	g_strfreev(actions);
 }
 
 /**
@@ -259,10 +257,23 @@ void action_free(gpointer data)
 	struct action *action = data;
 
 	/* Free action data */
-	g_free(action->name);
-	g_free(action->description);
-	g_free(action->exec);
-	g_strfreev(action->numbers);
+	if (action->name) {
+		g_free(action->name);
+		action->name = NULL;
+	}
+	if (action->description) {
+		g_free(action->description);
+		action->description = NULL;
+	}
+	if (action->exec) {
+		g_free(action->exec);
+		action->exec = NULL;
+	}
+
+	if (action->numbers) {
+		g_strfreev(action->numbers);
+		action->numbers = NULL;
+	}
 
 	g_slice_free(struct action, action);
 }
@@ -276,6 +287,7 @@ static void action_load(struct profile *profile, const gchar *name)
 {
 	struct action *action;
 	gchar *settings_path;
+	gchar *filename;
 
 	/* Allocate fixed struct */
 	action = g_slice_new0(struct action);
@@ -284,7 +296,9 @@ static void action_load(struct profile *profile, const gchar *name)
 	settings_path = g_strconcat("/org/tabos/routermanager/profile/", profile->name, "/", name, "/", NULL);
 
 	/* Create/Read settings from path */
-	action->settings = g_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path);
+	filename = g_strconcat("actions/", profile->name, "-", name, NULL);
+	action->settings = rm_settings_new_with_path(ROUTERMANAGER_SCHEME_PROFILE_ACTION, settings_path, filename);
+	g_free(filename);
 
 	/* Read internal data */
 	action->name = g_settings_get_string(action->settings, "name");
@@ -336,4 +350,5 @@ void action_shutdown(struct profile *profile)
 
 	/* Clear action list */
 	g_slist_free_full(profile->action_list, action_free);
+	profile->action_list = NULL;
 }

@@ -30,8 +30,10 @@
 #include <libroutermanager/plugins.h>
 #include <libroutermanager/address-book.h>
 #include <libroutermanager/appobject.h>
+#include <libroutermanager/appobject-emit.h>
 #include <libroutermanager/file.h>
 #include <libroutermanager/router.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include <roger/pref.h>
@@ -61,6 +63,9 @@ static GString *first_name = NULL;
 static GString *last_name = NULL;
 static GString *company = NULL;
 static GString *title = NULL;
+static GFileMonitor *file_monitor = NULL;
+
+gboolean vcard_reload_contacts(void);
 
 /**
  * \brief Free header, options and entry line
@@ -433,6 +438,7 @@ static void process_photo(struct vcard_data *card_data, struct contact *contact)
 	loader = gdk_pixbuf_loader_new();
 	if (gdk_pixbuf_loader_write(loader, image_ptr, len, &error)) {
 		contact->image = gdk_pixbuf_loader_get_pixbuf(loader);
+		contact->image_len = len;
 	} else {
 		g_debug("Error!! (%s)", error->message);
 		g_free(image_ptr);
@@ -664,6 +670,29 @@ void parse_char(int chr)
 }
 
 /**
+ * \brief VCard file change callback
+ * \param monitor file monitor
+ * \param file file structure
+ * \param other_file unused file structure
+ * \param event_type file monitor event
+ * \param user_data unused pointer
+ */
+static void vcard_file_changed_cb(GFileMonitor *monitor, GFile *file, GFile *other_file, GFileMonitorEvent event_type, gpointer user_data)
+{
+	if (event_type != G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT) {
+		return;
+	}
+
+	g_debug("%s(): %d", __FUNCTION__, event_type);
+
+	/* Reload contacts */
+	vcard_reload_contacts();
+
+	/* Send signal to redraw journal and update contacts view */
+	emit_contacts_changed();
+}
+
+/**
  * \brief Load card file information
  * \param file_name file name to read
  */
@@ -673,14 +702,25 @@ void vcard_load_file(char *file_name)
 	GFileInfo *file_info;
 	goffset file_size;
 	GFileInputStream *input_stream;
+	GError *error = NULL;
 	gchar *data;
 	gint chr;
 	gboolean start_of_line = TRUE;
 	gboolean fold = FALSE;
 	gint index;
 
+	if (!g_file_test(file_name, G_FILE_TEST_EXISTS)) {
+		g_debug("%s(): file does not exists, abort: %s", __FUNCTION__, file_name);
+		return;
+	}
+
 	/* Open file */
 	file = g_file_new_for_path(file_name);
+	if (!file) {
+		g_warning("%s(): could not open file %s", __FUNCTION__, file_name);
+		return;
+	}
+
 	file_info = g_file_query_info(file, G_FILE_ATTRIBUTE_STANDARD_SIZE, G_FILE_QUERY_INFO_NONE, NULL, NULL);
 	file_size = g_file_info_get_size(file_info);
 
@@ -723,6 +763,17 @@ void vcard_load_file(char *file_name)
 	parse_char('\n');
 
 	g_input_stream_close(G_INPUT_STREAM(input_stream), NULL, NULL);
+
+	if (file_monitor) {
+		g_file_monitor_cancel(G_FILE_MONITOR(file_monitor));
+	}
+
+	file_monitor = g_file_monitor_file(file, 0, NULL, &error);
+	if (file_monitor) {
+		g_signal_connect(file_monitor, "changed", G_CALLBACK(vcard_file_changed_cb), NULL);
+	} else {
+		g_warning("%s(): could not connect file monitor. Error: %s", __FUNCTION__, error ? error->message : "?");
+	}
 }
 
 /**
@@ -904,8 +955,6 @@ void vcard_write_file(char *file_name)
 	GSList *addresses;
 
 	data = g_string_new("");
-
-	file_name = g_strdup("/home/buzz/roger-test.vcf");
 
 	current_position = 0;
 
@@ -1114,9 +1163,13 @@ void impl_activate(PeasActivatable *plugin)
 {
 	gchar *name;
 
-	vcard_settings = g_settings_new("org.tabos.roger.plugins.vcard");
+	vcard_settings = rm_settings_plugin_new("org.tabos.roger.plugins.vcard", "vcard");
 
 	name = g_settings_get_string(vcard_settings, "filename");
+	if (EMPTY_STRING(name)) {
+		name = g_build_filename(g_get_user_data_dir(), "roger", "ab.vcf", NULL);
+		g_settings_set_string(vcard_settings, "filename", name);
+	}
 
 	vcard_load_file(name);
 

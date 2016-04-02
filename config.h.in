@@ -15,23 +15,20 @@
 /* Use new CAPI */
 #undef HAVE_CAPI_36
 
-/* Use new CUPS backend */
-#undef HAVE_CUPS_BACKEND
-
 /* Define to 1 if you have the `dcgettext' function. */
 #undef HAVE_DCGETTEXT
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
-/* Have libebook >= 3.5.4 */
-#undef HAVE_EBOOK_SOURCE_REGISTRY
-
 /* Have faxophone */
 #undef HAVE_FAXOPHONE
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
+
+/* Have gnotification */
+#undef HAVE_GNOTIFICATION
 
 /* Have gstreamer 1.0 */
 #undef HAVE_GSTREAMER1
@@ -99,12 +96,8 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-#undef NO_MINUS_C_MINUS_O
 
 /* Name of package */
 #undef PACKAGE
@@ -129,9 +122,6 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
-
-/* Use headerbar */
-#undef USE_HEADERBAR
 
 /* Use printer server on port 9100 */
 #undef USE_PRINTER_SERVER

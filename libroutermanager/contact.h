@@ -32,11 +32,16 @@ struct contact_address {
 };
 
 struct contact {
+	/* Name */
 	gchar *name;
+	/* Picture */
 	gpointer image;
+	/* Picture len */
 	gsize image_len;
+	/* Picture URI for online services */
 	gchar *image_uri;
 
+#if 1
 	/* currently active number */
 	gchar *number;
 	gchar *company;
@@ -44,16 +49,21 @@ struct contact {
 	gchar *zip;
 	gchar *city;
 	gboolean lookup;
+#endif
 
+	/* Phone numbers */
 	GSList *numbers;
+	/* Addresses */
 	GSList *addresses;
 
+	/* Private data */
 	gpointer priv;
 };
 
 void contact_copy(struct contact *src, struct contact *dst);
 struct contact *contact_dup(struct contact *src);
 gint contact_name_compare(gconstpointer a, gconstpointer b);
+struct contact *contact_find_by_number(gchar *number);
 
 G_END_DECLS
 

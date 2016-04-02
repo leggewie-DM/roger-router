@@ -1,9 +1,9 @@
 /**
  * Roger Router - Plugin Application Indicator
- * Copyright (c) 2013-2014 Dieter Schärf
+ * Copyright (c) 2013-2015 Dieter Schärf
  *
  * Roger Router
- * Copyright (c) 2012-2014 Jan-Michael Brummer
+ * Copyright (c) 2012-2015 Jan-Michael Brummer
  *
  * This file is part of Roger Router.
  *
@@ -31,6 +31,7 @@
 #include <libroutermanager/plugins.h>
 #include <libroutermanager/profile.h>
 #include <libroutermanager/routermanager.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/about.h>
 #include <roger/application.h>
@@ -89,7 +90,7 @@ GtkWidget *indicator_menu_functions(void)
  */
 void indicator_dial_number_cb(GtkMenuItem *item, gpointer user_data)
 {
-	app_show_phone_window(user_data);
+	app_show_phone_window(user_data, NULL);
 }
 
 /**
@@ -121,8 +122,8 @@ void indicator_menu_last_calls_group(GtkWidget *menu, gchar *label, int call_typ
 			} else {
 				gtk_menu_item_set_label(GTK_MENU_ITEM(item), call->remote->number);
 			}
-			gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 			g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(indicator_dial_number_cb), call->remote);
+			gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 
 			count++;
 
@@ -196,6 +197,11 @@ void indicator_journal_cb(void)
 	}
 }
 
+void indicator_phone_cb(GtkWidget *widget, gpointer user_data)
+{
+	app_show_phone_window(NULL, NULL);
+}
+
 /**
  * \brief create menu
  * \param none
@@ -222,7 +228,7 @@ GtkWidget *indicator_menu(void)
 	/* Phone */
 	item = gtk_menu_item_new_with_label(_("Phone"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(app_show_phone_window), NULL);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(indicator_phone_cb), NULL);
 
 	/* Last calls */
 	item = gtk_menu_item_new_with_label(_("Last calls"));
@@ -282,8 +288,8 @@ GtkWidget *indicator_menu(void)
  */
 void indicator_connection_notify_cb(AppObject *obj, struct connection *connection, gpointer unused_pointer)
 {
-	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISS);
-	if (connection->type == CONNECTION_TYPE_MISS) {
+	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISSED);
+	if (connection->type == CONNECTION_TYPE_MISSED) {
 		g_debug("Setting missed icon");
 		app_indicator_set_status(indicator, APP_INDICATOR_STATUS_ATTENTION);
 	}
@@ -302,9 +308,9 @@ void indicator_combobox_default_changed_cb(GtkComboBox *widget, gpointer user_da
 	g_settings_set_string(indicator_settings, "default-icon", gtk_combo_box_get_active_id(GTK_COMBO_BOX(combo_box)));
 
 	/* Update indicator icon */
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(indicator_settings, "default-icon"), ".png", NULL);
-	app_indicator_set_icon_full(indicator, path, "default-icon");
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(indicator_settings, "default-icon"), NULL);
+	app_indicator_set_icon_full(indicator, iconname, "default-icon");
+	g_free(iconname);
 }
 
 /**
@@ -320,9 +326,9 @@ void indicator_combobox_notify_changed_cb(GtkComboBox *widget, gpointer user_dat
 	g_settings_set_string(indicator_settings, "notify-icon", gtk_combo_box_get_active_id(GTK_COMBO_BOX(combo_box)));
 
 	/* Update indicator attention icon */
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(indicator_settings, "notify-icon"), ".png", NULL);
-	app_indicator_set_attention_icon_full(indicator, path, "notify-icon");
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(indicator_settings, "notify-icon"), NULL);
+	app_indicator_set_attention_icon_full(indicator, iconname, "notify-icon");
+	g_free(iconname);
 }
 
 void impl_activate(PeasActivatable *plugin)
@@ -332,14 +338,14 @@ void impl_activate(PeasActivatable *plugin)
 
 	journal_set_hide_on_quit(TRUE);
 
-	indicator_settings = g_settings_new("org.tabos.roger.plugins.indicator");
+	indicator_settings = rm_settings_plugin_new("org.tabos.roger.plugins.indicator", "indicator");
 
 	/* Create Application Indicator */
-	gchar *path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(indicator_settings, "default-icon"), ".png", NULL);
-	indicator = app_indicator_new("roger", path, APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
-	path = g_strconcat(get_directory(APP_DATA), G_DIR_SEPARATOR_S, g_settings_get_string(indicator_settings, "notify-icon"), ".png", NULL);
-	app_indicator_set_attention_icon_full(indicator, path, "notify-icon");
-	g_free(path);
+	gchar *iconname = g_strconcat("roger-", g_settings_get_string(indicator_settings, "default-icon"), NULL);
+	indicator = app_indicator_new("roger", iconname, APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
+	iconname = g_strconcat("roger-", g_settings_get_string(indicator_settings, "notify-icon"), NULL);
+	app_indicator_set_attention_icon_full(indicator, iconname, "notify-icon");
+	g_free(iconname);
 
 	menu = indicator_menu();
 	app_indicator_set_menu(indicator, GTK_MENU(menu));

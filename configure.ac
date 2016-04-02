@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce configure.
 
 m4_define([roger_major], [1])
 m4_define([roger_minor], [8])
-m4_define([roger_micro], [9])
+m4_define([roger_micro], [14])
 
 m4_define([roger_version],[roger_major.roger_minor.roger_micro])
 
@@ -54,14 +54,14 @@ case "$host" in
 	*-*-*mingw*)
 		WIN32=yes
 		macos=no
-		OS_CFLAGS="-D_WIN32_WINNT=0x0501 -DROUTERMANAGER_PLUGINS='\"lib/routermanager/plugins/\"' -DAPP_PLUGINS='\"lib/roger/plugins/\"' -DAPP_DATA='\"share/roger/\"' -DAPP_LOCALE='\"share/locale\"'"
+		OS_CFLAGS="-D_WIN32_WINNT=0x0501 -DROUTERMANAGER_PLUGINS='\"lib/routermanager/\"' -DAPP_PLUGINS='\"lib/roger/\"' -DAPP_DATA='\"share/roger/\"' -DAPP_LOCALE='\"share/locale\"'"
 		OS_LIBS="-mwindows -mms-bitfields -Wl,-subsystem,windows -lws2_32"
 		AC_CHECK_TOOL(WINDRES, windres)
 	;;
 	*darwin*)
 		WIN32=no
 		macos=yes
-		OS_CFLAGS="-DROUTERMANAGER_PLUGINS='\"lib/routermanager/plugins/\"' -DAPP_PLUGINS='\"lib/roger/plugins/\"' -DAPP_DATA='\"share/roger/\"' -DAPP_LOCALE='\"share/locale\"'"
+		OS_CFLAGS="-DROUTERMANAGER_PLUGINS='\"lib/routermanager/\"' -DAPP_PLUGINS='\"lib/roger/\"' -DAPP_DATA='\"share/roger/\"' -DAPP_LOCALE='\"share/locale\"'"
 		OS_LIBS="-rdynamic"
 	;;
 	*freebsd*)
@@ -74,7 +74,7 @@ case "$host" in
 	*)
 		WIN32=no
 		macos=no
-		OS_CFLAGS="-DROUTERMANAGER_PLUGINS='\"\$(libdir)/routermanager/plugins/\"' -DAPP_PLUGINS='\"\$(libdir)/roger/plugins/\"' -DAPP_DATA='\"\$(datadir)/roger/\"' -DAPP_LOCALE='\"\$(localedir)\"' -Wall"
+		OS_CFLAGS="-DROUTERMANAGER_PLUGINS='\"\$(libdir)/routermanager/\"' -DAPP_PLUGINS='\"\$(libdir)/roger/\"' -DAPP_DATA='\"\$(datadir)/roger/\"' -DAPP_LOCALE='\"\$(localedir)\"' -Wall"
 		OS_LIBS="-rdynamic"
 	;;
 esac
@@ -84,10 +84,10 @@ AC_MSG_RESULT([$WIN32])
 AM_CONDITIONAL(WIN32, test "x$WIN32" != "xno")
 AM_CONDITIONAL(MACOSX, test "x$macos" != "xno")
 
-PKG_CHECK_MODULES([EXTRA], [glib-2.0 >= 2.32 gio-2.0 >= 2.32 speex >= 1.0 speexdsp >= 1.0 sndfile >= 1.0.0 libxml-2.0])
+PKG_CHECK_MODULES([EXTRA], [glib-2.0 >= 2.40 gio-2.0 >= 2.40 speex >= 1.0 speexdsp >= 1.0 sndfile >= 1.0.0 libxml-2.0 gupnp-1.0 gssdp-1.0])
 
-# Check for GTK >= 3.0
-PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])
+# Check for GTK >= 3.14
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10])
 
 PKG_CHECK_MODULES([GMODULE], [gmodule-2.0])
 
@@ -96,19 +96,8 @@ PKG_CHECK_MODULES([SOUP], [libsoup-2.4])
 PKG_CHECK_MODULES([PEAS], [libpeas-1.0])
 PKG_CHECK_MODULES([PEAS_GTK], [libpeas-gtk-1.0])
 
-#PKG_CHECK_MODULES([TIFF], [libtiff-4])
 AC_CHECK_HEADERS([tiffio.h])
 AC_CHECK_LIB([tiff], [TIFFOpen], , AC_MSG_ERROR("Can't build without libtiff (does your system require a libtiff-devel package?)"), -lm)
-
-# Introspection
-#GOBJECT_INTROSPECTION_CHECK([0.9.3])
-
-#if test "$found_introspection" = "yes"; then
-#	enable_introspection=yes
-#	AC_DEFINE([ENABLE_INTROSPECTION], [1], [Define to enable GObject Introspection])
-#else
-#	enable_introspection=no
-#fi
 
 dnl *******************************************************************
 dnl Decide which fax spooler solution to use
@@ -154,81 +143,13 @@ case "$with_fax_spooler_type" in
 	;;
 esac
 
-AC_ARG_WITH([headerbar],
-	[AS_HELP_STRING([--with-headerbar=@<:@ARG@:>@],
-		[whether journal shoudl make use of GtkHeaderBar (possible values: no, yes) @<:@default=no@:>@])],
-	[],
-	[with_headerbar=no])
-
-AC_MSG_CHECKING(for headerbar)
-case "$with_headerbar" in
-	yes)
-		AC_DEFINE(USE_HEADERBAR, 1, [Use headerbar])
-		AC_MSG_RESULT([Using GtkHeaderBar])
-	;;
-	no)
-		AC_MSG_RESULT([Using statusbar])
-	;;
-	*)
-		AC_MSG_ERROR([Invalid option $with_headerbar])
-	;;
-esac
-
 dnl *******************************************************************
-dnl CUPS backend is optional
+dnl Check if we can support gtkstatusicon plugin
 dnl *******************************************************************
-AC_ARG_WITH([cups],
-	[AS_HELP_STRING([--with-cups=@<:@ARG@:>@],
-		[Use cups (possible values: no, yes or check) @<:@default=no@:>@])],
-	[],
-	[with_cups=no])
-
-AC_MSG_CHECKING(for cups)
-AS_IF([test "x$with_cups" != xsuper],
-[
-        if test "x$with_cups" = xcheck; then
-		if test -n "`cups-config --build 2> /dev/null`"; then
-			with_cups=yes
-		fi	
-        elif test "x$with_cups" = xyes; then
-		if ! test -n "`cups-config --build 2> /dev/null`"; then
-			AC_MSG_FAILURE([--with-cups=yes was given, but test for cups-config failed])
-		fi
-        fi
-        if test "x$with_cups" = xyes; then
-                AC_SUBST([CUPS_CFLAGS], ["`cups-config --cflags`"])
-                AC_SUBST([CUPS_LIBS], ["`cups-config --libs`"])
-                ROGER_FEATURES_YES="\tcups backend\n$ROGER_FEATURES_YES"
-        else
-                with_cups=no
-                ROGER_FEATURES_NO="\tcups backend\n$ROGER_FEATURES_NO"
-        fi
-
-])
-
-AC_MSG_RESULT($with_cups)
-AM_CONDITIONAL(WITH_CUPS, test "x$with_cups" != "xno")
-
-dnl *******************************************************************
-dnl Check for cups backend directory if cups is found
-dnl *******************************************************************
-
-if test "x$with_cups" = xyes; then
-	AC_MSG_CHECKING(for cups backend  directory)
-	AC_ARG_WITH(cupsbackenddir,
-		AC_HELP_STRING([--with-cupsbackenddir=DIR],
-			[ cups-backends directory (auto)]),
-		[ cupsbackenddir="${withval}" ],
-		[ cupsbackenddir=`cups-config --serverbin`/backend ]
-	)
-	if test -d "$cupsbackenddir"; then
-		AC_SUBST([cupsbackenddir])
-		AC_MSG_RESULT([$cupsbackenddir])
-		AC_DEFINE([HAVE_CUPS_BACKEND], 1, [Use new CUPS backend])
-	else
-		AC_MSG_FAILURE([Cups backend directory not found!])
-	fi
-fi
+AC_MSG_CHECKING(for statusicon support)
+AS_IF($PKG_CONFIG --atleast-version=3.16 gtk+-3.0, [with_statusicon=no], [with_statusicon=yes])
+AC_MSG_RESULT($with_statusicon)
+AM_CONDITIONAL(WITH_STATUSICON, test "x$with_statusicon" != "xno")
 
 # Check for unistd.h
 AC_CHECK_HEADERS([unistd.h])
@@ -243,8 +164,6 @@ AC_CACHE_CHECK([for sigset()],[ac_cv_sigset],[
 if test x"ac_cv_sigset" = xyes; then
 	AC_DEFINE([HAVE_SIGSET],1,[Define to 1 if you have the `sigset' function.])
 fi
-
-	
 
 dnl ********************************************************************
 dnl libnotify is optional
@@ -349,6 +268,8 @@ AC_MSG_RESULT($with_macos_keychain)
 
 AM_CONDITIONAL(WITH_MACOS_KEYCHAIN, test "x$with_macos_keychain" != "xno")
 
+AM_CONDITIONAL(WITH_OSX_AB, test "x$with_macos_keychain" != "xno")
+
 dnl ********************************************************************
 dnl kwallet is optional
 dnl ********************************************************************
@@ -409,12 +330,12 @@ AC_ARG_WITH([ebook],
 	[],
 	[with_ebook=check])
 
-AC_MSG_CHECKING(for libebook-1.2 >= 3.2.0)
+AC_MSG_CHECKING(for libebook-1.2 >= 3.10.0)
 AS_IF([test "x$with_ebook" != xno],
 	[if test "x$with_ebook" = xcheck; then
-		$PKG_CONFIG --atleast-version=3.2.0 libebook-1.2 && with_ebook=yes
+		$PKG_CONFIG --atleast-version=3.10.0 libebook-1.2 && with_ebook=yes
 	elif test "x$with_ebook" = xyes; then
-		$PKG_CONFIG --atleast-version=3.2.0 libebook-1.2 || AC_MSG_FAILURE(
+		$PKG_CONFIG --atleast-version=3.10.0 libebook-1.2 || AC_MSG_FAILURE(
 		[--with-ebook=yes was given, but test for ebook failed])
 	fi
 	if test "x$with_ebook" = xyes; then
@@ -430,30 +351,21 @@ AS_IF([test "x$with_ebook" != xno],
 AC_MSG_RESULT($with_ebook)
 AM_CONDITIONAL(WITH_EBOOK, test "x$with_ebook" != "xno")
 
-AS_IF([test "x$with_ebook" != xno],
-	[$PKG_CONFIG --atleast-version=3.5.4 libebook-1.2 && with_ebook_registry=yes
-	if test "x$with_ebook_registry" = xyes; then
-		AC_DEFINE([HAVE_EBOOK_SOURCE_REGISTRY], 1, [Have libebook >= 3.5.4])
-		PKG_CHECK_MODULES([EVO_SHELL], evolution-shell-3.0 >= 3.5.4,, AC_MSG_ERROR([libebook >= 3.5.4 requires evolution-shell]))
-	fi
-])
-AM_CONDITIONAL(HAVE_EBOOK_SOURCE_REGISTRY, test "x$with_ebook_registry" = "xyes")
-
 dnl ********************************************************************
-dnl gstreamer-1.x is optional
+dnl gstreamer-1.4 is optional
 dnl ********************************************************************
 AC_ARG_WITH([gstreamer1],
 	[AS_HELP_STRING([--with-gstreamer1=@<:@ARG@:>@],
 	[Use gstreamer-1.0 (possible values: no, yes, check, or the path to gstreamer) @<:@default=check@:>@])],
 	[],
-	[with_gstreamer1=no])
+	[with_gstreamer1=check])
 
-AC_MSG_CHECKING(for gstreamer-1.0 and gstreamer-app-1.0)
+AC_MSG_CHECKING(for gstreamer-1.4 and gstreamer-app-1.4)
 AS_IF([test "x$with_gstreamer1" != xno],
 	[if test "x$with_gstreamer1" = xcheck; then
-		pkg-config --exists gstreamer-1.0 && pkg-config --exists gstreamer-app-1.0 && with_gstreamer1=yes
+		pkg-config --atleast-version=1.4.0 gstreamer-1.0 && pkg-config --exists gstreamer-app-1.0 && with_gstreamer1=yes
 	elif test "x$with_gstreamer1" = xyes; then
-		( pkg-config --exists gstreamer-1.0 && pkg-config --exists gstreamer-app-1.0) || AC_MSG_FAILURE(
+		( pkg-config --atleast-version=1.4.0 gstreamer-1.0 && pkg-config --exists gstreamer-app-1.0) || AC_MSG_FAILURE(
 			[--with-gstreamer-1.0=yes was given, but test for gstreamer-1.0 and gstreamer-app-1.0 failed])
 	fi
 	if test "x$with_gstreamer1" = xyes; then
@@ -476,9 +388,9 @@ dnl pulseaudio is optional
 dnl ********************************************************************
 AC_ARG_WITH([pulseaudio],
 	[AS_HELP_STRING([--with-pulseaudio=@<:@ARG@:>@],
-	[Use pulseaudio (possible values: no, yes, check, or the path to pulseaudio) @<:@default=check@:>@])],
+	[Use pulseaudio (possible values: no, yes, check, or the path to pulseaudio) @<:@default=no@:>@])],
 	[],
-	[with_pulseaudio=check])
+	[with_pulseaudio=no])
 
 AC_MSG_CHECKING(for libpulse-simple)
 AS_IF([test "x$with_pulseaudio" != xsuper],
@@ -508,9 +420,9 @@ dnl portaudio is optional
 dnl ********************************************************************
 AC_ARG_WITH([portaudio],
 	[AS_HELP_STRING([--with-portaudio=@<:@ARG@:>@],
-	[Use portaudio (possible values: no, yes, check, or the path to portaudio) @<:@default=check@:>@])],
+	[Use portaudio (possible values: no, yes, check, or the path to portaudio) @<:@default=no@:>@])],
 	[],
-	[with_portaudio=check])
+	[with_portaudio=no])
 
 AC_MSG_CHECKING(for portaudio-2.0 version 19)
 AS_IF([test "x$with_portaudio" != xsuper],
@@ -622,6 +534,36 @@ AC_MSG_RESULT($with_appindicator3)
 
 AM_CONDITIONAL(WITH_APPINDICATOR3, test "x$with_appindicator3" != "xno")
 
+dnl ********************************************************************
+dnl gnotification is optional
+dnl ********************************************************************
+AC_ARG_WITH([gnotification],
+	[AS_HELP_STRING([--with-gnotifcation=@<:@ARG@:>@],
+	[Use gnotification (possible values: no, yes, check, or the path to gnotification) @<:@default=check@:>@])],
+	[],
+	[with_gnotification=check])
+
+AC_MSG_CHECKING(for gnotification)
+AS_IF([test "x$with_gnotification" != xno],
+	[if test "x$with_gnotification" = xcheck; then
+		pkg-config --atleast-version=3.12.0 gtk+-3.0 && with_gnotification=yes
+	elif test "x$with_gnotification" = xyes; then
+		( pkg-config --atleast-version=3.12.0 gtk+-3.12.0) || AC_MSG_FAILURE(
+			[--with-gnotificaion=yes was given, but test for gnotificaion failed])
+	fi
+	if test "x$with_gnotification" = xyes; then
+		AC_DEFINE([HAVE_GNOTIFICATION], 1, [Have gnotification])
+		ROGER_FEATURES_YES="\tgnotification\n$ROGER_FEATURES_YES"
+	else
+		with_gnotification=no
+		ROGER_FEATURES_NO="\tgnotification\n$ROGER_FEATURES_NO"
+	fi
+])
+
+AC_MSG_RESULT($with_gnotification)
+
+AM_CONDITIONAL(WITH_GNOTIFICATION, test "x$with_gnotification" != "xno")
+
 AC_ARG_ENABLE(werror,
 	AS_HELP_STRING([--disable-werror], [don't use gcc's -Werror option when building]))
 
@@ -647,7 +589,6 @@ AC_CONFIG_FILES([
     libroutermanager/data/Makefile
     libroutermanager/plugins/Makefile
     libroutermanager/plugins/fritzbox/Makefile
-    libroutermanager/plugins/speedport/Makefile
     libroutermanager/plugins/callmonitor/Makefile
     libroutermanager/plugins/areacodes_global/Makefile
     libroutermanager/plugins/pulseaudio/Makefile
@@ -664,8 +605,6 @@ AC_CONFIG_FILES([
     roger/plugins/Makefile
     roger/plugins/statusicon/Makefile
     roger/plugins/statusicon/data/Makefile
-    roger/plugins/notification/Makefile
-    roger/plugins/notification/data/Makefile
     roger/plugins/fritzfon/Makefile
     roger/plugins/fritzfon/data/Makefile
     roger/plugins/evolution/Makefile
@@ -682,7 +621,18 @@ AC_CONFIG_FILES([
     roger/plugins/thunderbird/data/Makefile
     roger/plugins/kwallet/Makefile
     roger/plugins/keychain/Makefile
-    cups-backend/Makefile
+    roger/plugins/osxab/Makefile
+    roger/plugins/notification/Makefile
+    roger/plugins/notification/data/Makefile
+    roger/plugins/gnotification/Makefile
+    roger/plugins/gnotification/data/Makefile
+    roger/images/Makefile
+    roger/images/16x16/Makefile
+    roger/images/22x22/Makefile
+    roger/images/24x24/Makefile
+    roger/images/32x32/Makefile
+    roger/images/48x48/Makefile
+    roger/images/scalable/Makefile
     macosx/roger.plist
     macosx/package
 ])

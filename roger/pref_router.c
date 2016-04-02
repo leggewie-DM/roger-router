@@ -169,9 +169,9 @@ static GtkWidget *pref_page_router_settings(void)
 	 */
 	group = gtk_grid_new();
 
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(group), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(group), 15);
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(group), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(group), 12);
 
 	/* Host */
 	host_label = ui_label_new(_("Host"));
@@ -202,6 +202,7 @@ static GtkWidget *pref_page_router_settings(void)
 	login_password_entry = gtk_entry_new();
 	gtk_widget_set_tooltip_text(login_password_entry, _("Router login password"));
 	gtk_entry_set_visibility(GTK_ENTRY(login_password_entry), FALSE);
+	gtk_entry_set_input_purpose(GTK_ENTRY(login_password_entry), GTK_INPUT_PURPOSE_PASSWORD);
 	gtk_widget_set_hexpand(login_password_entry, TRUE);
 	gtk_grid_attach(GTK_GRID(group), login_password_entry, 1, line, 1, 1);
 	gtk_entry_set_text(GTK_ENTRY(login_password_entry), router_get_login_password(profile));
@@ -231,6 +232,7 @@ static GtkWidget *pref_page_router_settings(void)
 	gtk_grid_attach(GTK_GRID(group), ftp_password_label, 0, line, 1, 1);
 
 	ftp_password_entry = gtk_entry_new();
+	gtk_entry_set_input_purpose(GTK_ENTRY(ftp_password_entry), GTK_INPUT_PURPOSE_PASSWORD);
 	gtk_widget_set_tooltip_text(ftp_password_entry, _("Router FTP password"));
 	gtk_entry_set_visibility(GTK_ENTRY(ftp_password_entry), FALSE);
 	gtk_widget_set_hexpand(ftp_password_entry, TRUE);
@@ -248,9 +250,6 @@ static GtkWidget *pref_page_router_settings(void)
 	/* Show passwords */
 	line++;
 	show_password_toggle = gtk_check_button_new_with_label(_("Show passwords"));
-	GdkRGBA col;
-	gdk_rgba_parse(&col, "#808080");
-	gtk_widget_override_color(show_password_toggle, GTK_STATE_FLAG_NORMAL, &col);
 
 	gtk_widget_set_tooltip_text(show_password_toggle, _("Toggle passwords visibility"));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(show_password_toggle), FALSE);
@@ -282,9 +281,9 @@ static GtkWidget *pref_page_router_information(void)
 	 */
 	group = gtk_grid_new();
 
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(group), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(group), 5);
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(group), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(group), 12);
 
 	space = gtk_label_new("");
 	gtk_widget_set_vexpand(space, TRUE);
@@ -320,11 +319,17 @@ GtkWidget *pref_page_router(void)
 
 	grid = gtk_grid_new();
 
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 18);
+	gtk_grid_set_column_spacing(GTK_GRID(grid), 18);
+
 	group = pref_page_router_settings();
 	gtk_grid_attach(GTK_GRID(grid), group, 0, 0, 1, 1);
 
 	group = pref_page_router_information();
 	gtk_grid_attach(GTK_GRID(grid), group, 0, 2, 1, 1);
+
+	gtk_widget_set_margin(grid, 6, 6, 6, 6);
 
 	return grid;
 }

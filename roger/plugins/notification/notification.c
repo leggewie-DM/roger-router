@@ -34,6 +34,7 @@
 #include <libroutermanager/profile.h>
 #include <libroutermanager/lookup.h>
 #include <libroutermanager/gstring.h>
+#include <libroutermanager/settings.h>
 
 #include <roger/main.h>
 #include <roger/application.h>
@@ -62,24 +63,17 @@ static gchar **selected_incoming_numbers = NULL;
 static void notify_accept_clicked_cb(NotifyNotification *notify, gchar *action, gpointer user_data)
 {
 	struct connection *connection = user_data;
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
-
-	/** Ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	struct contact *contact;
 
 	g_assert(connection != NULL);
+
+	/** Ask for contact information */
+	contact = contact_find_by_number(connection->remote_number);
 
 	notify_notification_close(connection->notification, NULL);
 	connection->notification = NULL;
 
-	app_show_phone_window(contact);
-
-	phone_pickup(connection->priv ? connection->priv : active_capi_connection);
-
-	phone_add_connection(connection->priv ? connection->priv : active_capi_connection);
+	app_show_phone_window(contact, connection);
 }
 
 /**
@@ -174,8 +168,7 @@ void notifications_connection_notify_cb(AppObject *obj, struct connection *conne
 {
 	NotifyNotification *notify = NULL;
 	gchar *text = NULL;
-	struct contact contact_s;
-	struct contact *contact = &contact_s;
+	struct contact *contact;
 	gchar **numbers = NULL;
 	gint count;
 	gboolean found = FALSE;
@@ -244,9 +237,7 @@ void notifications_connection_notify_cb(AppObject *obj, struct connection *conne
 	}
 
 	/** Ask for contact information */
-	memset(contact, 0, sizeof(struct contact));
-	contact_s.number = connection->remote_number;
-	emit_contact_process(contact);
+	contact = contact_find_by_number(connection->remote_number);
 
 	/* Create notification message */
 	if (!intern) {
@@ -264,9 +255,13 @@ void notifications_connection_notify_cb(AppObject *obj, struct connection *conne
 	}
 
 	if (connection->type == CONNECTION_TYPE_INCOMING) {
-		notify = notify_notification_new(_("Incoming call"), text, "notification-message-roger-in.svg");
+		gchar *title = g_strdup_printf(_("Incoming call (on %s)"), connection->local_number);
+
+		notify = notify_notification_new(title, text, "notification-message-roger-in.svg");
 		notify_notification_add_action(notify, "accept", _("Accept"), notify_accept_clicked_cb, connection, NULL);
 		notify_notification_add_action(notify, "deny", _("Decline"), notify_deny_clicked_cb, connection, NULL);
+
+		g_free(title);
 	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
 		gint duration = g_settings_get_int(notification_settings, "duration");
 
@@ -307,7 +302,7 @@ void impl_activate(PeasActivatable *plugin)
 {
 	RouterManagerNotificationPlugin *notify_plugin = ROUTERMANAGER_NOTIFICATION_PLUGIN(plugin);
 
-	notification_settings = g_settings_new("org.tabos.roger.plugins.notification");
+	notification_settings = rm_settings_plugin_new("org.tabos.roger.plugins.notification", "notification");
 
 	gchar **incoming_numbers = g_settings_get_strv(notification_settings, "incoming-numbers");
 	gchar **outgoing_numbers = g_settings_get_strv(notification_settings, "outgoing-numbers");

@@ -31,8 +31,7 @@
 #include <roger/uitools.h>
 #include <roger/phone.h>
 #include <roger/icons.h>
-
-GdkPixbuf *image_get_scaled(GdkPixbuf *image, gint req_width, gint req_height);
+#include <roger/journal.h>
 
 static GtkWidget *edit_dialog = NULL;
 static GtkWidget *edit_widget = NULL;
@@ -176,13 +175,9 @@ void refresh_edit_dialog(struct contact *contact)
 	gtk_widget_set_vexpand(scrolled, TRUE);
 	gtk_widget_set_hexpand(scrolled, TRUE);
 
-	gtk_widget_set_margin(grid, 10, 20, 10, 20);
+	gtk_widget_set_margin(grid, 18, 18, 18, 18);
 
-#if GTK_CHECK_VERSION(3,8,0)
 	gtk_container_add(GTK_CONTAINER(scrolled), grid);
-#else
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled), grid);
-#endif
 
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
@@ -199,8 +194,13 @@ void refresh_edit_dialog(struct contact *contact)
 	gtk_widget_set_hexpand(detail_name_label, TRUE);
 	gtk_grid_attach(GTK_GRID(grid), detail_name_label, 1, 0, 1, 1);
 
-	GdkPixbuf *buf = image_get_scaled(contact ? contact->image : NULL, 96, 96);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(detail_photo_image), buf);
+	if (contact && contact->image) {
+		GdkPixbuf *buf = image_get_scaled(contact->image, 96, 96);
+		gtk_image_set_from_pixbuf(GTK_IMAGE(detail_photo_image), buf);
+	} else {
+		gtk_image_set_from_icon_name(GTK_IMAGE(detail_photo_image), AVATAR_DEFAULT, GTK_ICON_SIZE_DIALOG);
+		gtk_image_set_pixel_size(GTK_IMAGE(detail_photo_image), 96);
+	}
 
 	for (numbers = contact ? contact->numbers : NULL; numbers != NULL; numbers = numbers->next) {
 		GtkWidget *number;
@@ -230,7 +230,7 @@ void refresh_edit_dialog(struct contact *contact)
 		remove = gtk_button_new();
 		gtk_widget_set_tooltip_text(remove, _("Remove number"));
 		//phone_image = gtk_image_new_from_icon_name("user-trash-symbolic", GTK_ICON_SIZE_BUTTON);
-		phone_image = get_icon(APP_ICON_TRASH, GTK_ICON_SIZE_BUTTON);
+		phone_image = gtk_image_new_from_icon_name(APP_ICON_TRASH, GTK_ICON_SIZE_BUTTON); 
 		gtk_button_set_image(GTK_BUTTON(remove), phone_image);
 		g_signal_connect(remove, "clicked", G_CALLBACK(remove_phone_clicked_cb), contact);
 		g_object_set_data(G_OBJECT(remove), "number", phone_number);
@@ -257,7 +257,7 @@ void refresh_edit_dialog(struct contact *contact)
 		remove = gtk_button_new();
 		gtk_widget_set_tooltip_text(remove, _("Remove address"));
 		//phone_image = gtk_image_new_from_icon_name("user-trash-symbolic", GTK_ICON_SIZE_BUTTON);
-		phone_image = get_icon(APP_ICON_TRASH, GTK_ICON_SIZE_BUTTON);
+		phone_image = gtk_image_new_from_icon_name(APP_ICON_TRASH, GTK_ICON_SIZE_BUTTON);
 		gtk_button_set_image(GTK_BUTTON(remove), phone_image);
 		g_signal_connect(remove, "clicked", G_CALLBACK(remove_address_clicked_cb), contact);
 		g_object_set_data(G_OBJECT(remove), "address", address);
@@ -362,13 +362,28 @@ void add_detail_button_clicked_cb(GtkComboBox *box, gpointer user_data)
 	}
 }
 
-void contact_editor(struct contact *contact)
+extern GSettings *app_settings;
+
+void contact_editor(struct contact *contact, GtkWidget *parent)
 {
-	edit_dialog = gtk_dialog_new_with_buttons(_("Edit contact"), NULL, GTK_DIALOG_MODAL, _("_Save"), GTK_RESPONSE_ACCEPT, _("Cancel"), GTK_RESPONSE_REJECT, NULL);
+	GtkWidget *dialog;
+	gboolean use_header = roger_uses_headerbar();
+
+	dialog = g_object_new(GTK_TYPE_DIALOG, "use-header-bar", use_header, NULL);
+	gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+	gtk_window_set_title(GTK_WINDOW(dialog), _("Contact"));
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
+	gtk_dialog_add_button(GTK_DIALOG(dialog), _("Cancel"), GTK_RESPONSE_CANCEL);
+	GtkWidget *save = gtk_dialog_add_button(GTK_DIALOG(dialog), _("Save"), GTK_RESPONSE_OK);
+
+	ui_set_suggested_style(save);
+
+	edit_dialog = dialog;
 
 	refresh_edit_dialog(contact);
 
-	gtk_window_set_position(GTK_WINDOW(edit_dialog), GTK_WIN_POS_CENTER);
+	gtk_window_set_transient_for(GTK_WINDOW(edit_dialog), GTK_WINDOW(parent));
+
 	gtk_widget_set_size_request(edit_dialog, 500, 500);
 	int response = gtk_dialog_run(GTK_DIALOG(edit_dialog));
 	gtk_widget_destroy(edit_dialog);
@@ -376,15 +391,31 @@ void contact_editor(struct contact *contact)
 	edit_dialog = NULL;
 	edit_widget = NULL;
 
-	if (response == GTK_RESPONSE_ACCEPT) {
-		GtkWidget *info_dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_INFO, GTK_BUTTONS_OK_CANCEL, _("Note: Depending on the address book plugin not all information might be saved"));
+	if (response == GTK_RESPONSE_OK) {
+		gboolean ok = g_settings_get_boolean(app_settings, "contacts-hide-warning");
 
-		response = gtk_dialog_run(GTK_DIALOG(info_dialog));
-		gtk_widget_destroy(info_dialog);
-		if (response == GTK_RESPONSE_OK) {
+		if (!ok) {
+			GtkWidget *info_dialog = gtk_message_dialog_new(GTK_WINDOW(parent), use_header ? GTK_DIALOG_USE_HEADER_BAR : 0, GTK_MESSAGE_INFO, GTK_BUTTONS_OK_CANCEL, _("Note: Depending on the address book plugin not all information might be saved"));
+			GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(info_dialog));
+			GtkWidget *check_button = gtk_check_button_new_with_label(_("Do not show again"));
+
+			g_settings_bind(app_settings, "contacts-hide-warning", check_button, "active", G_SETTINGS_BIND_DEFAULT);
+			gtk_widget_set_halign(check_button, GTK_ALIGN_CENTER);
+			gtk_widget_show(check_button);
+			gtk_container_add(GTK_CONTAINER(content), check_button);
+
+			response = gtk_dialog_run(GTK_DIALOG(info_dialog));
+			gtk_widget_destroy(info_dialog);
+
+			if (response == GTK_RESPONSE_OK) {
+				ok = TRUE;
+			}
+		}
+
+		if (ok) {
 			address_book_save_contact(contact);
 		}
-	}
 
-	address_book_reload_contacts();
+		address_book_reload_contacts();
+	}
 }

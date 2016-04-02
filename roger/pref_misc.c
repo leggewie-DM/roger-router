@@ -24,6 +24,7 @@
 #include <roger/main.h>
 #include <roger/pref.h>
 #include <roger/pref_misc.h>
+#include <roger/application.h>
 
 /**
  * \brief Ghostscript file set callback - set file name to settings
@@ -70,13 +71,13 @@ GtkWidget *pref_page_misc(void)
 	GtkWidget *gs_entry;
 	GtkWidget *gs_button;
 
-	/* Ghostscript executable:
-	 * <FILE-CHOOSER>
-	 */
-
 	/* Set standard spacing to 5 */
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
+
+	/* Ghostscript executable:
+	 * <FILE-CHOOSER>
+	 */
 
 	gs_label = ui_label_new(_("Ghostscript executable"));
 	gtk_grid_attach(GTK_GRID(grid), gs_label, 0, 0, 1, 1);

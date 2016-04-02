@@ -37,7 +37,7 @@
 #include <libroutermanager/password.h>
 
 #ifdef __APPLE__
-#include <gtkmacintegration/gtkosxapplication.h>
+#include <gtkmacintegration-gtk3/gtkosxapplication.h>
 #endif
 
 /** Private data pointing to the plugin directory */
@@ -131,8 +131,12 @@ gboolean routermanager_init(gboolean debug, GError **error)
 	/* Say hello */
 	g_debug("%s %s", PACKAGE_NAME, PACKAGE_VERSION);
 
-	/* Create routermanager directory */
+	/* Create routermanager data & cache directory */
 	dir = g_build_filename(g_get_user_data_dir(), "routermanager", NULL);
+	g_mkdir_with_parents(dir, 0700);
+	g_free(dir);
+
+	dir = g_build_filename(g_get_user_cache_dir(), "routermanager", NULL);
 	g_mkdir_with_parents(dir, 0700);
 	g_free(dir);
 
@@ -157,8 +161,11 @@ gboolean routermanager_init(gboolean debug, GError **error)
 	/* Initialize plugins */
 	plugins_init();
 
-	/* Initialize password manager */
-	password_manager_init();
+	/* Check password manager */
+	if (!password_manager_get_plugins()) {
+		g_set_error(error, RM_ERROR, RM_ERROR_ROUTER, "%s", "No password manager plugins active");
+		return FALSE;
+	}
 
 	/* Initialize router */
 	if (!router_init()) {

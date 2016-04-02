@@ -42,6 +42,8 @@ ROUTERMANAGER_PLUGIN_REGISTER(ROUTERMANAGER_TYPE_GSTREAMER_PLUGIN, RouterManager
 static gint gstreamer_channels = 2;
 static gint gstreamer_sample_rate = 8000;
 static gint gstreamer_bits_per_sample = 16;
+static GstDeviceMonitor *monitor = NULL;
+static gboolean use_gst_device_monitor = FALSE;
 
 struct pipes {
 	GstElement *in_pipe;
@@ -80,18 +82,53 @@ static GSList *gstreamer_detect_devices(void)
 {
 	GSList *devices = NULL;
 	struct audio_device *audio_device;
+	GList *gst_devices = NULL;
 
-	audio_device = g_slice_new0(struct audio_device);
-	audio_device->internal_name = g_strdup("autoaudiosink");
-	audio_device->name = g_strdup("Standard");
-	audio_device->type = AUDIO_OUTPUT;
-	devices = g_slist_prepend(devices, audio_device);
+	if (!use_gst_device_monitor) {
+		audio_device = g_slice_new0(struct audio_device);
 
-	audio_device = g_slice_new0(struct audio_device);
-	audio_device->internal_name = g_strdup("autoaudiosrc");
-	audio_device->name = g_strdup("Standard");
-	audio_device->type = AUDIO_INPUT;
-	devices = g_slist_prepend(devices, audio_device);
+		audio_device->internal_name = g_strdup("autoaudiosink");
+		audio_device->name = g_strdup("Standard");
+		audio_device->type = AUDIO_OUTPUT;
+		devices = g_slist_prepend(devices, audio_device);
+ 
+		audio_device = g_slice_new0(struct audio_device);
+		audio_device->internal_name = g_strdup("autoaudiosrc");
+		audio_device->name = g_strdup("Standard");
+		audio_device->type = AUDIO_INPUT;
+		devices = g_slist_prepend(devices, audio_device);
+
+		return devices;
+	}
+
+	gst_devices = gst_device_monitor_get_devices(monitor);
+	GList *list;
+
+	for (list = gst_devices; list != NULL; list = list->next) {
+		GstDevice *device = list->data;
+		gchar *name = gst_device_get_display_name(device);
+		gchar *class;
+
+		if (strstr(name, "Monitor")) {
+			continue;
+		}
+
+		class = gst_device_get_device_class(device);
+
+		if (!strcmp(class, "Audio/Sink")) {
+			audio_device = g_slice_new0(struct audio_device);
+			audio_device->internal_name = g_strdup(name);
+			audio_device->name = g_strdup(name);
+			audio_device->type = AUDIO_OUTPUT;
+			devices = g_slist_prepend(devices, audio_device);
+		} else if (!strcmp(class, "Audio/Source")) {
+			audio_device = g_slice_new0(struct audio_device);
+			audio_device->internal_name = g_strdup(name);
+			audio_device->name = g_strdup(name);
+			audio_device->type = AUDIO_INPUT;
+			devices = g_slist_prepend(devices, audio_device);
+		}
+	}
 
 	return devices;
 }
@@ -137,6 +174,16 @@ static void gstreamer_set_buffer_input_size(gpointer priv, unsigned buffer_size)
  */
 static int gstreamer_init(unsigned char channels, unsigned short sample_rate, unsigned char bits_per_sample)
 {
+	monitor = gst_device_monitor_new();
+
+	gst_device_monitor_add_filter(monitor, "Audio/Sink", NULL);
+	gst_device_monitor_add_filter(monitor, "Audio/Source", NULL);
+
+	use_gst_device_monitor = gst_device_monitor_start(monitor);
+	if (!use_gst_device_monitor) {
+		g_warning("Failed to start device monitor!");
+	}
+
 	/* TODO: Check if configuration is valid and usable */
 	gstreamer_channels = channels;
 	gstreamer_sample_rate = sample_rate;
@@ -145,96 +192,156 @@ static int gstreamer_init(unsigned char channels, unsigned short sample_rate, un
 	return 0;
 }
 
-static gboolean gstreamer_start_pipeline(struct pipes *pipes, gchar *command)
-{
-	GstElement *pipe;
-	GstElement *bin;
-	GError *error = NULL;
-	GstStateChangeReturn ret;
-
-	/* Start pipeline */
-	//g_debug("command: '%s'", command);
-	pipe = gst_parse_launch(command, &error);
-
-	if (error != NULL || !pipe) {
-		g_warning("Error: Could not launch output pipe. => %s", error->message);
-		g_error_free(error);
-
-		return FALSE;
-	}
-
-	/* Try to set pipeline state to playing */
-	ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
-	if (ret == GST_STATE_CHANGE_FAILURE) {
-		g_warning("Error: cannot start pipeline => %d", ret);
-		return FALSE;
-	}
-
-	bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_src");
-	if (bin) {
-		pipes->out_pipe = pipe;
-		pipes->out_bin = bin;
-		gstreamer_set_buffer_output_size(pipe, 160);
-	} else {
-		bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_sink");
-
-		pipes->in_pipe = pipe;
-		pipes->in_bin = bin;
-		gstreamer_set_buffer_input_size(pipe, 160);
-	}
-
-	return TRUE;
-}
-
 /**
  * \brief Open audio device
  * \return private data or NULL on error
  */
 static void *gstreamer_open(void)
 {
-	gchar *command = NULL;
-	struct pipes *pipes = NULL;
 	struct profile *profile = profile_get_active();
-	gchar *output;
-	gchar *input;
+	struct pipes *pipes = NULL;
+	GstElement *sink;
+	GstElement *audio_sink;
+	GstElement *audio_source;
+	GstElement *pipe;
+	GstElement *filter;
+	GstElement *convert;
+	GstElement *resample;
+	GstCaps *filtercaps;
+	GstDevice *output_device = NULL;
+	GstDevice *input_device = NULL;
+	GList *list;
+	GList *gst_devices;
+	gchar *output_name;
+	gchar *input_name;
+	gint ret;
 
-	pipes = g_slice_alloc(sizeof(struct pipes));
+	pipes = g_slice_alloc0(sizeof(struct pipes));
 	if (pipes == NULL) {
 		return NULL;
 	}
 
-	output = g_settings_get_string(profile->settings, "audio-output");
-	input = g_settings_get_string(profile->settings, "audio-input");
-	if (EMPTY_STRING(output)) {
-		output = g_strdup("autoaudiosink");
+	/* Get devices */
+	if (use_gst_device_monitor) {
+		gst_devices = gst_device_monitor_get_devices(monitor);
+
+		g_debug("%s(): Using device monitor based audio src/sink", __FUNCTION__);
+
+		/* Get preferred input/output device names */
+		output_name = g_settings_get_string(profile->settings, "audio-output");
+		input_name = g_settings_get_string(profile->settings, "audio-input");
+
+		/* Find output device */
+		for (list = gst_devices; list != NULL; list = list->next) {
+			GstDevice *device = list->data;
+
+			gchar *class = gst_device_get_device_class(device);
+			gchar *name = gst_device_get_display_name(device);
+
+			if (!strcmp(class, "Audio/Sink") && !strcmp(name, output_name)) {
+				output_device = device;
+			} else if (!strcmp(class, "Audio/Source") && !strcmp(name, input_name)) {
+				input_device = device;
+			}
+		}
+
+		if (!output_device || !input_device) {
+			g_error("Audio device not found!");
+		}
+
+		audio_sink = gst_device_create_element(output_device, NULL);
+		audio_source = gst_device_create_element(input_device, NULL);
+	} else {
+		g_debug("%s(): Using auto audio src/sink", __FUNCTION__);
+		audio_sink = gst_element_factory_make("autoaudiosink", NULL);
+		audio_source = gst_element_factory_make("autoaudiosrc", NULL);
 	}
-	if (EMPTY_STRING(input)) {
-		input = g_strdup("autoaudiosrc");
+
+	/* Create output pipeline */
+	if (audio_sink != NULL) {
+		pipe = gst_pipeline_new("output");
+		g_assert(pipe != NULL);
+
+		GstElement *source = gst_element_factory_make("appsrc", "routermanager_src");
+		g_assert(source != NULL);
+
+		g_object_set(G_OBJECT(source),
+			"is-live", 1,
+			"format", 3,
+			"block", 1,
+			"max-bytes", 320,
+			NULL);
+
+		filter = gst_element_factory_make("capsfilter", "filter");
+
+		filtercaps = gst_caps_new_simple("audio/x-raw",
+			"format", G_TYPE_STRING, "S16LE",
+			"channels", G_TYPE_INT, gstreamer_channels,
+			"rate", G_TYPE_INT, gstreamer_sample_rate,
+			NULL);
+
+		g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
+		gst_caps_unref(filtercaps);
+
+		convert = gst_element_factory_make("audioconvert", "convert");
+		resample = gst_element_factory_make("audioresample", "resample");
+
+		gst_bin_add_many(GST_BIN(pipe), source, filter, convert, resample, audio_sink, NULL);
+		gst_element_link_many(source, filter, convert, resample, audio_sink, NULL);
+
+		ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
+		if (ret == GST_STATE_CHANGE_FAILURE) {
+			g_warning("Error: cannot start sink pipeline => %d", ret);
+			return NULL;
+		}
+
+		pipes->out_pipe = pipe;
+		pipes->out_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_src");
+		gstreamer_set_buffer_output_size(pipe, 160);
 	}
 
-	/* Create command for output pipeline */
-	command = g_strdup_printf("appsrc is-live=true name=routermanager_src format=3 block=1 max-bytes=320"
-		" ! audio/x-raw,format=S16LE"
-		",rate=%d"
-		",channels=%d"
-		" ! %s",
-		gstreamer_sample_rate, gstreamer_channels,
-		output);
+	/* Create input pipeline */
+	if (audio_source != NULL ) {
+		pipe = gst_pipeline_new("input");
+		g_assert(pipe != NULL);
 
-	gstreamer_start_pipeline(pipes, command);
-	g_free(command);
+		sink = gst_element_factory_make("appsink", "routermanager_sink");
+		g_assert(sink != NULL);
 
-	/* Create command for input pipeline */
-	command = g_strdup_printf("%s ! appsink drop=true max_buffers=2"
-	                          " caps=audio/x-raw,format=S16LE"
-	                          ",rate=%d"
-	                          ",channels=%d"
-	                          " name=routermanager_sink",
-	                          input,
-	                          gstreamer_sample_rate, gstreamer_channels);
+		g_object_set(G_OBJECT(sink),
+			"drop", 1,
+			"max-buffers", 2,
+			"sync", 1,
+			"qos", 1,
+			NULL);
 
-	gstreamer_start_pipeline(pipes, command);
-	g_free(command);
+		filter = gst_element_factory_make("capsfilter", "filter");
+
+		filtercaps = gst_caps_new_simple("audio/x-raw",
+			"format", G_TYPE_STRING, "S16LE",
+			"channels", G_TYPE_INT, gstreamer_channels,
+			"rate", G_TYPE_INT, gstreamer_sample_rate,
+			NULL);
+
+		//g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
+		gst_caps_unref(filtercaps);
+
+		convert = gst_element_factory_make("audioconvert", "convert");
+		resample = gst_element_factory_make("audioresample", "resample");
+
+		gst_bin_add_many(GST_BIN(pipe), audio_source, convert, resample, filter, sink, NULL);
+		gst_element_link_many(audio_source, convert, resample, filter, sink, NULL);
+
+		ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
+		if (ret == GST_STATE_CHANGE_FAILURE) {
+			g_warning("Error: cannot start source pipeline => %d", ret);
+			return NULL;
+		}
+
+		pipes->in_pipe = pipe;
+		pipes->in_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_sink");
+		gstreamer_set_buffer_input_size(pipe, 160);
+	}
 
 	pipes->adapter = gst_adapter_new();
 
@@ -275,14 +382,20 @@ static gsize gstreamer_read(void *priv, guchar *data, gsize size)
 	GstElement *sink = pipes->in_bin;
 	unsigned int read =  0;
 
+	if (!sink) {
+		return read;
+	}
+
 	sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
 	if (sample != NULL) {
 		gst_adapter_push(pipes->adapter, gst_sample_get_buffer(sample));
 	}
 
 	read = MIN(gst_adapter_available(pipes->adapter), size);
-	gst_adapter_copy(pipes->adapter, data, 0, read);
-	gst_adapter_flush(pipes->adapter, read);
+	if (read != 0) {
+		gst_adapter_copy(pipes->adapter, data, 0, read);
+		gst_adapter_flush(pipes->adapter, read);
+	}
 
 	return read;
 }
@@ -296,20 +409,25 @@ int gstreamer_close(void *priv)
 {
 	struct pipes *pipes = priv;
 
+	g_debug("close");
 	if (pipes == NULL) {
 		return 0;
 	}
 
 	GstElement *src = pipes->out_bin;
 	if (src != NULL) {
+		g_debug("src close");
 		GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(pipes->out_pipe));
 		gst_bus_add_watch(bus, pipeline_cleaner, pipes->out_pipe);
 		gst_app_src_end_of_stream(GST_APP_SRC(src));
+		gst_element_set_state(pipes->out_pipe, GST_STATE_NULL);
 		gst_object_unref(bus);
+		gst_object_unref(pipes->out_pipe);
 		pipes->out_pipe = NULL;
 	}
 
 	if (pipes->in_pipe != NULL) {
+		g_debug("in close");
 		gst_element_set_state(pipes->in_pipe, GST_STATE_NULL);
 		gst_object_unref(pipes->in_pipe);
 		pipes->out_pipe = NULL;
@@ -317,12 +435,16 @@ int gstreamer_close(void *priv)
 
 	g_slice_free(struct pipes, pipes);
 	pipes = NULL;
+	g_debug("done");
 
 	return 0;
 }
 
 int gstreamer_shutdown(void)
 {
+	gst_device_monitor_stop(monitor);
+	gst_object_unref(monitor);
+
 	return 0;
 }
 

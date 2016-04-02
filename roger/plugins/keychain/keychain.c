@@ -1,3 +1,27 @@
+/**
+ * Roger Router
+ * Copyright (c) 2012-2014 Jan-Michael Brummer
+ *
+ * This file is part of Roger Router.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 only.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * TODO
+ * Instead of removing password during update, use SecKeychainItemModifyContent() instead
+ */
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
 #include <CoreServices/CoreServices.h>
@@ -19,19 +43,9 @@ ROUTERMANAGER_PLUGIN_REGISTER(ROUTERMANAGER_TYPE_KEYCHAIN_PLUGIN, RouterManagerK
 
 static gboolean keychain_remove_password(struct profile *profile, const gchar *type);
 
-static gchar *keychain_get_password(struct profile *profile, const gchar *type) {
+OSStatus keychain_get(gchar *pwd_name, void **password, UInt32 *pwd_len, SecKeychainItemRef *item_ref)
+{
 	OSStatus status;
-	UInt32 pwd_length;
-	void *password = NULL;
-	gchar *pwd_name;
-	gchar *secret_password = NULL;
-
-	if (profile == NULL || profile->name == NULL || type == NULL) {
-		return NULL;
-	}
-
-	/* Find password */
-	pwd_name = g_strdup_printf("%s/%s", profile->name, type);
 
 	status = SecKeychainFindGenericPassword(
 		NULL,
@@ -39,9 +53,35 @@ static gchar *keychain_get_password(struct profile *profile, const gchar *type) 
 		SERVICE_NAME,
 		strlen(pwd_name),
 		pwd_name,
-		&pwd_length,
-		&password,
-		NULL);
+		pwd_len,
+		password,
+		item_ref);
+
+	return status;
+}
+
+/**
+ * \brief Get password of secure chain
+ * \param profile profile structure pointer
+ * \param type password type
+ * \return password or NULL on error
+ */
+static gchar *keychain_get_password(struct profile *profile, const gchar *type)
+{
+	OSStatus status;
+	UInt32 pwd_length;
+	void *password = NULL;
+	gchar *pwd_name;
+	gchar *secret_password = NULL;
+	SecKeychainItemRef ref;
+
+	if (profile == NULL || profile->name == NULL || type == NULL) {
+		return NULL;
+	}
+
+	/* Find password */
+	pwd_name = g_strdup_printf("%s/%s", profile->name, type);
+	status = keychain_get(pwd_name, &password, &pwd_length, &ref);
 	g_free(pwd_name);
 
 	/* Check return value, if no error occurred: return password */
@@ -56,10 +96,18 @@ static gchar *keychain_get_password(struct profile *profile, const gchar *type) 
 	return NULL;
 }
 
+/**
+ * \brief Store a new password in secure chain
+ * \param profile profile structure pointer
+ * \param type password type
+ * \param password password text
+ */
 static void keychain_store_password(struct profile *profile, const gchar *type, const gchar *password) {
 	OSStatus status;
 	SecKeychainItemRef item_ref = NULL;
 	gchar *pwd_name;
+	UInt32 pwd_len = 0;
+	void *pwd_data = NULL;
 
 	if (profile == NULL || profile->name == NULL || type == NULL) {
 		return;
@@ -67,41 +115,44 @@ static void keychain_store_password(struct profile *profile, const gchar *type, 
 
 	/* store password */
 	pwd_name = g_strdup_printf("%s/%s", profile->name, type);
-	status = SecKeychainFindGenericPassword(
-		NULL,
-		strlen(SERVICE_NAME),
-		SERVICE_NAME,
-		strlen(pwd_name),
-		pwd_name,
-		NULL,
-		NULL,
-		&item_ref);
 
-	if (status == noErr) {
-		/* remove existing keychain entry. This is not a clean solution as we remove any access entries as well */
-		/* macos however does not have a simple solution to just update a password */
+	status = keychain_get(pwd_name, &pwd_data, &pwd_len, &item_ref);
+	g_free(pwd_name);
 
-		keychain_remove_password(profile, type);
+	if (status == errSecItemNotFound) {
+		status = SecKeychainAddGenericPassword(NULL, strlen(SERVICE_NAME), SERVICE_NAME, strlen(pwd_name), pwd_name, strlen(password), password, NULL);
+		return;
 	}
 
-	/* insert new keychain entry */
-	status = SecKeychainAddGenericPassword(
-		NULL,
-		strlen(SERVICE_NAME),
-		SERVICE_NAME,
-		strlen(pwd_name),
-		pwd_name,
-		strlen(password),
-		password,
-		NULL);
+	if (status == noErr) {
+		status = SecKeychainItemFreeContent(NULL, pwd_data);
+	}
 
-	g_free(pwd_name);
+	if (status) {
+		g_warning("Couldn't gete password: %d", status);
+		CFRelease(item_ref);
+		return;
+	}
+	
+	/* insert new keychain entry */
+	status = SecKeychainItemModifyAttributesAndData(item_ref, NULL, (UInt32) strlen(password), password);
+
 	/* Check return value, if error occurred: show reason */
 	if (status != noErr) {
-		g_warning("Couldn't store password: %d", status);
+		g_warning("Couldn't modify password: %d", status);
+	}
+
+	if (item_ref) {
+		CFRelease(item_ref);
 	}
 }
 
+/**
+ * \brief Remove password of secure chain
+ * \param profile profile structure pointer
+ * \param type type indicating which password to remove
+ * \return TRUE on success, otherwise FALSE on error
+ */
 static gboolean keychain_remove_password(struct profile *profile, const gchar *type) {
 	OSStatus status;
 	SecKeychainItemRef item_ref = NULL;
@@ -139,6 +190,7 @@ static gboolean keychain_remove_password(struct profile *profile, const gchar *t
 	return ret;
 }
 
+/** Keychain password manager structure */
 struct password_manager keychain = {
 	"OS X Keychain",
 	keychain_store_password,
@@ -146,12 +198,20 @@ struct password_manager keychain = {
 	keychain_remove_password,
 };
 
+/**
+ * \brief Activate plugin
+ * \param plugin peas plugin structure
+ */
 void impl_activate(PeasActivatable *plugin)
 {
 	g_debug("Register keychain password manager plugin");
 	password_manager_register(&keychain);
 }
 
+/**
+ * \brief Deactivate plugin
+ * \param plugin peas plugin structure
+ */
 void impl_deactivate(PeasActivatable *plugin)
 {
 }

@@ -33,7 +33,7 @@ static struct router *active_router = NULL;
 static GSList *router_list = NULL;
 
 /** Mapping between config value and port type */
-struct phone_port router_phone_ports[NUM_PHONE_PORTS] = {
+struct phone_port router_phone_ports[PORT_MAX] = {
 	{"name-analog1", PORT_ANALOG1, -1},
 	{"name-analog2", PORT_ANALOG2, -1},
 	{"name-analog3", PORT_ANALOG3, -1},
@@ -79,13 +79,20 @@ GSList *router_get_phone_list(struct profile *profile)
 		return list;
 	}
 
-	for (index = 0; index < NUM_PHONE_PORTS; index++) {
+	phone = g_slice_new(struct phone);
+
+	phone->name = g_strdup("Softphone");
+	phone->type = PORT_SOFTPHONE;
+
+	list = g_slist_append(list, phone);
+
+	for (index = 0; index < PORT_MAX - 2; index++) {
 		fon = g_settings_get_string(profile->settings, router_phone_ports[index].name);
 		if (!EMPTY_STRING(fon)) {
 			phone = g_slice_new(struct phone);
 
 			phone->name = g_strdup(fon);
-			phone->type = g_strdup_printf("%d", router_phone_ports[index].type);
+			phone->type = router_phone_ports[index].type;
 
 			list = g_slist_append(list, phone);
 		}
@@ -103,7 +110,6 @@ static void free_phone_list(gpointer data)
 	struct phone *phone = data;
 
 	g_free(phone->name);
-	g_free(phone->type);
 }
 
 /**
@@ -338,7 +344,13 @@ gboolean router_clear_journal(struct profile *profile)
  */
 gboolean router_dial_number(struct profile *profile, gint port, const gchar *number)
 {
-	return active_router->dial_number(profile, port, number);
+	gchar *target = call_canonize_number(number);
+	gboolean ret;
+
+	ret = active_router->dial_number(profile, port, target);
+	g_free(target);
+
+	return ret;
 }
 
 /**
@@ -547,7 +559,15 @@ GSList *router_load_fax_reports(struct profile *profile, GSList *journal)
 	const gchar *file_name;
 	gchar *dir_name = g_settings_get_string(profile->settings, "fax-report-dir");
 
+	if (!dir_name) {
+		return journal;
+	}
+
 	dir = g_dir_open(dir_name, 0, &error);
+	if (!dir) {
+		g_debug("Could not open fax report directory");
+		return journal;
+	}
 
 	while ((file_name = g_dir_read_name(dir))) {
 		gchar *uri;
@@ -574,4 +594,94 @@ GSList *router_load_fax_reports(struct profile *profile, GSList *journal)
 	}
 
 	return journal;
+}
+
+/**
+ * \brief Load voice records and add them to the journal
+ * \param profile profile structure
+ * \param journal journal list pointer
+ * \return new journal list with attached fax reports
+ */
+GSList *router_load_voice_records(struct profile *profile, GSList *journal)
+{
+	GDir *dir;
+	GError *error = NULL;
+	const gchar *file_name;
+	const gchar *user_plugins = g_get_user_data_dir();
+	gchar *dir_name = g_build_filename(user_plugins, "roger", G_DIR_SEPARATOR_S, NULL);
+
+	if (!dir_name) {
+		return journal;
+	}
+
+	dir = g_dir_open(dir_name, 0, &error);
+	if (!dir) {
+		g_debug("Could not open voice records directory");
+		return journal;
+	}
+
+	while ((file_name = g_dir_read_name(dir))) {
+		gchar *uri;
+		gchar **split;
+		gchar *date_time;
+		gchar *num;
+
+		/* %2.2d.%2.2d.%4.4d-%2.2d-%2.2d-%s-%s.wav",
+			time_val->tm_mday, time_val->tm_mon, 1900 + time_val->tm_year,
+			time_val->tm_hour, time_val->tm_min, connection->source, connection->target);
+		*/
+
+		if (!strstr(file_name, ".wav")) {
+			continue;
+		}
+
+		split = g_strsplit(file_name, "-", -1);
+		if (g_strv_length(split) != 5) {
+			g_strfreev(split);
+			continue;
+		}
+
+		uri = g_build_filename(dir_name, file_name, NULL);
+		num = split[4];
+		num[strlen(num) - 4] = '\0';
+
+		//date_time = g_strdup_printf("%s.%s.%s %2.2s:%2.2s", split[3], split[4], split[5] + 2, split[6], split[7]);
+		date_time = g_strdup_printf("%s %2.2s:%2.2s", split[0], split[1], split[2]);
+		journal = call_add(journal, CALL_TYPE_RECORD, date_time, "", num, ("Record"), split[3], "0:01", g_strdup(uri));
+
+		g_free(uri);
+		g_strfreev(split);
+	}
+
+	return journal;
+}
+
+/**
+ * \brief Get phone port
+ * \param profile router information structure
+ * \return phone port
+ */
+gint router_get_phone_port(struct profile *profile)
+{
+	return g_settings_get_int(profile->settings, "port");
+}
+
+/**
+ * \brief Set phone port
+ * \param profile router information structure
+ * \param port phone port
+ */
+void router_set_phone_port(struct profile *profile, gint port)
+{
+	g_settings_set_int(profile->settings, "port", port);
+}
+
+/**
+ * \brief Get number suppress state
+ * \param profile router information structure
+ * \return suppress state
+ */
+gboolean router_get_suppress_state(struct profile *profile)
+{
+	return g_settings_get_boolean(profile->settings, "suppress");
 }
