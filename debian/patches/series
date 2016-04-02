@@ -1,6 +1,3 @@
-disable-evo-shell.diff
 fix-manpages.diff
 fix-cups-quoting.diff
-force-cups-backend.diff
-jmb-debug.patch
 enable-maintainer-mode.diff
