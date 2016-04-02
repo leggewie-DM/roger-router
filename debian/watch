@@ -1,2 +1,2 @@
 version=3
-http://en.tabos.org/downloads  .*roger-router-(.*)\.(?:tgz|tbz2|tar\.(?:gz|bz2|xz))
+http://www.tabos.org/download  .*roger-router-(.*)\.(?:tgz|tbz2|tar\.(?:gz|bz2|xz))
