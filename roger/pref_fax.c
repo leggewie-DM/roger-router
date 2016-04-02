@@ -107,10 +107,14 @@ GtkWidget *pref_page_fax(void)
 	 * <CHECKBOX> Error correction mode
 	 */
 
+	gtk_grid_set_row_spacing(GTK_GRID(general_grid), 18);
+	gtk_grid_set_column_spacing(GTK_GRID(general_grid), 18);
+	gtk_widget_set_margin(grid, 6, 6, 6, 6);
+
 	/* General */
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(general_grid), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(general_grid), 15);
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(general_grid), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(general_grid), 12);
 
 	header_label = ui_label_new(_("Header"));
 	gtk_grid_attach(GTK_GRID(general_grid), header_label, 0, 0, 1, 1);
@@ -141,14 +145,11 @@ GtkWidget *pref_page_fax(void)
 
 	/* Reports */
 
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(report_grid), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(report_grid), 15);
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(report_grid), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(report_grid), 12);
 
 	report_toggle = gtk_check_button_new_with_label(_("Create fax report"));
-	GdkRGBA col;
-	gdk_rgba_parse(&col, "#808080");
-	gtk_widget_override_color(report_toggle, GTK_STATE_FLAG_NORMAL, &col);
 
 	g_settings_bind(profile_get_active()->settings, "fax-report", report_toggle, "active", G_SETTINGS_BIND_DEFAULT);
 	gtk_grid_attach(GTK_GRID(report_grid), report_toggle, 0, 0, 1, 1);
@@ -156,8 +157,8 @@ GtkWidget *pref_page_fax(void)
 	report_dir_label = ui_label_new(_("Report directory"));
 	gtk_grid_attach(GTK_GRID(report_grid), report_dir_label, 0, 1, 1, 1);
 
-#if 1
 	/* Currently the file chooser button implementation is buggy and therefore we will use a workaround (entry + button) */
+#if 1
 	GtkWidget *report_dir;
 	report_dir = gtk_file_chooser_button_new(_("Select report directory"), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
 	gtk_widget_set_hexpand(report_dir, TRUE);
@@ -169,26 +170,15 @@ GtkWidget *pref_page_fax(void)
 	}
 	g_signal_connect(report_dir, "selection-changed", G_CALLBACK(report_dir_file_set_cb), NULL);
 	gtk_grid_attach(GTK_GRID(report_grid), report_dir, 1, 1, 1, 1);
-#else
-	GtkWidget *report_dir_entry = gtk_entry_new();
-	GtkWidget *report_dir_button = gtk_button_new_with_label(_("Select"));
-
-	gtk_widget_set_hexpand(report_dir_entry, TRUE);
-	g_settings_bind(profile_get_active()->settings, "fax-report-dir", report_dir_entry, "text", G_SETTINGS_BIND_DEFAULT);
-
-	g_signal_connect(report_dir_button, "clicked", G_CALLBACK(report_dir_button_clicked_cb), report_dir_entry);
-
-	gtk_grid_attach(GTK_GRID(report_grid), report_dir_entry, 1, 1, 1, 1);
-	gtk_grid_attach(GTK_GRID(report_grid), report_dir_button, 2, 1, 1, 1);
-#endif
 
 	gtk_grid_attach(GTK_GRID(grid), pref_group_create(report_grid, _("Report"), TRUE, TRUE), 0, 1, 1, 1);
+#endif
 
 	/* Modem */
 
 	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(modem_grid), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(modem_grid), 15);
+	gtk_grid_set_row_spacing(GTK_GRID(modem_grid), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(modem_grid), 12);
 
 	/* MSN */
 	fax_number_label = ui_label_new(_("MSN"));
@@ -244,7 +234,6 @@ GtkWidget *pref_page_fax(void)
 	gtk_grid_attach(GTK_GRID(modem_grid), cip_combobox, 1, 3, 1, 1);
 
 	ecm_toggle = gtk_check_button_new_with_label(_("Error correction mode (ECM)"));
-	gtk_widget_override_color(ecm_toggle, GTK_STATE_FLAG_NORMAL, &col);
 	g_settings_bind(profile_get_active()->settings, "fax-ecm", ecm_toggle, "active", G_SETTINGS_BIND_DEFAULT);
 	gtk_grid_attach(GTK_GRID(modem_grid), ecm_toggle, 0, 4, 2, 1);
 

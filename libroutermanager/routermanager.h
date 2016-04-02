@@ -24,6 +24,8 @@
 #include "config.h"
 #endif
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 #define _(text) gettext(text)

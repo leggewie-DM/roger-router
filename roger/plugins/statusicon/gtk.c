@@ -35,6 +35,8 @@
 #include <roger/pref.h>
 #include <roger/uitools.h>
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
 #define MAX_LASTCALLS 5
 
 #define ROUTERMANAGER_TYPE_STATUSICON_PLUGIN        (routermanager_statusicon_plugin_get_type ())
@@ -84,7 +86,7 @@ GtkWidget *statusicon_menu_functions(void)
  */
 void statusicon_dial_number_cb(GtkMenuItem *item, gpointer user_data)
 {
-	app_show_phone_window(user_data);
+	app_show_phone_window(user_data, NULL);
 }
 
 /**
@@ -180,6 +182,11 @@ void statusicon_journal_cb(void)
 	}
 }
 
+void statusicon_phone_cb(GtkWidget *widget, gpointer user_data)
+{
+	app_show_phone_window(NULL, NULL);
+}
+
 void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint activate_time, gpointer user_data)
 {
 	GtkWidget *menu;
@@ -201,7 +208,7 @@ void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint act
 	/* Phone */
 	item = gtk_menu_item_new_with_label(_("Phone"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(app_show_phone_window), NULL);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(statusicon_phone_cb), NULL);
 
 	/* Last calls */
 	item = gtk_menu_item_new_with_label(_("Last calls"));
@@ -263,8 +270,8 @@ void statusicon_popup_menu_cb(GtkStatusIcon *statusicon, guint button, guint act
  */
 void statusicon_connection_notify_cb(AppObject *obj, struct connection *connection, gpointer unused_pointer)
 {
-	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISS);
-	if (connection->type == CONNECTION_TYPE_MISS) {
+	g_debug("Called: '%d/%d", connection->type, CONNECTION_TYPE_MISSED);
+	if (connection->type == CONNECTION_TYPE_MISSED) {
 		g_debug("Setting missed icon");
 		gchar *iconname = g_strconcat("roger-", g_settings_get_string(statusicon_settings, "notify-icon"), NULL);
 		gtk_status_icon_set_from_icon_name(statusicon, iconname);
@@ -358,11 +365,8 @@ void impl_deactivate(PeasActivatable *plugin)
 		gtk_widget_show(GTK_WIDGET(journal_win));
 	}
 
-//#if !GTK_CHECK_VERSION(3, 7, 0)
-	/* This is currently broken in GTK 3.8.0 - for now the application must be restart to remove the status icon..... */
 	gtk_status_icon_set_visible(statusicon, FALSE);
 	g_object_unref(statusicon);
-//#endif
 
 	statusicon = NULL;
 }
@@ -422,3 +426,5 @@ GtkWidget *impl_create_configure_widget(PeasGtkConfigurable *config)
 
 	return group;
 }
+
+G_GNUC_END_IGNORE_DEPRECATIONS

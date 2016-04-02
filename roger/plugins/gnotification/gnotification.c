@@ -52,116 +52,103 @@ ROUTERMANAGER_PLUGIN_REGISTER_CONFIGURABLE(ROUTERMANAGER_TYPE_GNOTIFICATION_PLUG
 static GSettings *gnotification_settings = NULL;
 static gchar **selected_outgoing_numbers = NULL;
 static gchar **selected_incoming_numbers = NULL;
-
-#if 0
-/**
- * \brief Notify accept clicked
- * \param notify gnotification window
- * \param action clicked action
- * \param user_data user data - phone number
- */
-static void notify_accept_clicked_cb(NotifyGNotification *notify, gchar *action, gpointer user_data)
-{
-	struct connection *connection = user_data;
-	struct contact *contact;
-
-	g_assert(connection != NULL);
-
-	/** Ask for contact information */
-	contact = contact_find_by_number(connection->remote_number);
-
-	notify_gnotification_close(connection->notification, NULL);
-	connection->notification = NULL;
-
-	app_show_phone_window(contact);
-
-	phone_pickup(connection->priv ? connection->priv : active_capi_connection);
-
-	phone_add_connection(connection->priv ? connection->priv : active_capi_connection);
-}
-
-/**
- * \brief Deny incoming call
- * \param notify gnotification window
- * \param action clicked action
- * \param user_data popup widget pointer
- */
-static void notify_deny_clicked_cb(NotifyGNotification *notify, gchar *action, gpointer user_data)
-{
-	struct connection *connection = user_data;
-
-	g_assert(connection != NULL);
-
-	notify_gnotification_close(connection->notification, NULL);
-	connection->notification = NULL;
-
-	phone_hangup(connection->priv ? connection->priv : active_capi_connection);
-}
-#endif
+static guint missed_calls = 0;
 
 /**
  * \brief Close gnotification window
  */
 static gboolean gnotification_close(gpointer notification)
 {
-	g_debug("close");
-	g_application_withdraw_notification(G_APPLICATION(application), "new-call");
+	g_application_withdraw_notification(G_APPLICATION(roger_app), notification);
 	return FALSE;
 }
 
-gboolean gnotification_update(gpointer data) {
-	struct contact *contact = data;
-	struct connection *connection;
-	GNotification *notify;
+gboolean gnotification_show(struct connection *connection, struct contact *contact)
+{
+	GNotification *notify = NULL;
+	gchar *title;
+	gchar *text = NULL;
+	gchar *map = NULL;
 
-	g_assert(contact != NULL);
-	g_assert(contact->priv != NULL);
+	if (connection->type != CONNECTION_TYPE_INCOMING && connection->type != CONNECTION_TYPE_OUTGOING) {
+		g_warning("Unhandled case in connection notify - gnotification!");
 
-	connection = contact->priv;
-	notify = connection->notification;
-
-	if (notify && !EMPTY_STRING(contact->name)) {
-		gchar *text;
-
-		text = g_markup_printf_escaped(_("Name:\t%s\nNumber:\t%s\nCompany:\t%s\nStreet:\t%s\nCity:\t\t%s%s%s"),
-		                               contact->name,
-		                               contact->number,
-		                               "",
-		                               contact->street,
-		                               contact->zip,
-		                               contact->zip ? " " : "",
-		                               contact->city);
-
-		g_notification_set_body(notify, text);
-		g_application_send_notification(G_APPLICATION(application), "new-call", notify);
-
-		g_free(text);
+		return FALSE;
 	}
 
-	return FALSE;
+	if (!EMPTY_STRING(contact->street) && !EMPTY_STRING(contact->city)) {
+		gchar *map_un;
+
+		map_un = g_strdup_printf("http://maps.google.de/?q=%s,%s %s",
+					contact->street,
+					contact->zip,
+					contact->city);
+		GRegex *pro = g_regex_new(" ", G_REGEX_DOTALL | G_REGEX_OPTIMIZE, 0, NULL);
+		map = g_regex_replace_literal(pro, map_un, -1, 0, "%20", 0, NULL);
+		g_regex_unref(pro);
+		g_free(map_un);
+	}
+
+	/* Create notification message */
+	text = g_markup_printf_escaped(_("Name:\t\t%s\nNumber:\t\t%s\nCompany:\t%s\nStreet:\t\t%s\nCity:\t\t%s%s%s\nMap:\t\t%s"),
+	                               contact->name ? contact->name : "",
+	                               contact->number ? contact->number : "",
+	                               contact->company ? contact->company : "",
+	                               contact->street ? contact->street : "",
+	                               contact->zip ? contact->zip : "",
+	                               contact->zip ? " " : "",
+	                               contact->city ? contact->city : "",
+	                               map ? map : ""
+	                              );
+
+	if (connection->type == CONNECTION_TYPE_INCOMING) {
+		title = g_strdup_printf(_("Incoming call (on %s)"), connection->local_number);
+	} else {
+		title = g_strdup_printf(_("Outgoing call (on %s)"), connection->local_number);
+	}
+
+	notify = g_notification_new(title);
+	g_free(title);
+
+	g_notification_set_body(notify, text);
+	g_free(text);
+
+	connection->notification = g_strdup_printf("%s%s", connection->local_number, contact->number);
+
+	if (connection->type == CONNECTION_TYPE_INCOMING) {
+		g_notification_add_button_with_target(notify, _("Accept"), "app.pickup", "i", connection->id);
+		g_notification_add_button_with_target(notify, _("Decline"), "app.hangup", "i", connection->id);
+	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
+		gint duration = g_settings_get_int(gnotification_settings, "duration");
+
+		g_timeout_add_seconds(duration, gnotification_close, connection->notification);
+	}
+
+	g_notification_set_priority(notify, G_NOTIFICATION_PRIORITY_URGENT);
+	g_application_send_notification(G_APPLICATION(roger_app), connection->notification, notify);
+	g_object_unref(notify);
+
+	return EMPTY_STRING(contact->name);
 }
 
-/**
- * \brief Reverse lookup of connection data and gnotification redraw
- * \param data connection pointer
- * \return NULL
- */
-static gpointer gnotification_reverse_lookup_thread(gpointer data)
+void gnotification_show_missed_calls(void)
 {
-	struct connection *connection = data;
-	struct contact *contact;
+	GNotification *notify = NULL;
+	gchar *text = NULL;
 
-	contact = g_slice_new0(struct contact);
+	g_application_withdraw_notification(G_APPLICATION(roger_app), "missed-calls");
 
-	contact->number = g_strdup(connection->remote_number);
-	contact->priv = data;
+	/* Create notification message */
+	text = g_strdup_printf(_("You have missed calls"));
 
-	routermanager_lookup(contact->number, &contact->name, &contact->street, &contact->zip, &contact->city);
+	notify = g_notification_new(_("Missed call(s)"));
 
-	g_idle_add(gnotification_update, contact);
-	g_debug("done");
+	g_notification_set_body(notify, text);
+	g_free(text);
 
-	return NULL;
+	g_notification_add_button_with_target(notify, _("Open journal"), "app.journal", NULL);
+	g_application_send_notification(G_APPLICATION(roger_app), "missed-calls", notify);
+	g_object_unref(notify);
 }
 
 /**
@@ -172,13 +159,9 @@ static gpointer gnotification_reverse_lookup_thread(gpointer data)
  */
 void gnotifications_connection_notify_cb(AppObject *obj, struct connection *connection, gpointer unused_pointer)
 {
-	GNotification *notify = NULL;
-	gchar *text = NULL;
-	struct contact *contact;
 	gchar **numbers = NULL;
 	gint count;
 	gboolean found = FALSE;
-	gboolean intern = FALSE;
 
 	/* Get gnotification numbers */
 	if (connection->type & CONNECTION_TYPE_OUTGOING) {
@@ -201,27 +184,29 @@ void gnotifications_connection_notify_cb(AppObject *obj, struct connection *conn
 	}
 
 	if (!found && connection->local_number[0] != '0') {
-		g_debug("type: %d, number '%s' not found", connection->type, call_scramble_number(connection->local_number));
-
+		gchar *scramble_local = call_scramble_number(connection->local_number);
 		gchar *tmp = call_full_number(connection->local_number, FALSE);
+		gchar *scramble_tmp = call_scramble_number(tmp);
+
+		g_debug("type: %d, number '%s' not found", connection->type, scramble_local);
 
 		/* Match numbers against local number and check if we should show a gnotification */
 		for (count = 0; count < g_strv_length(numbers); count++) {
-			g_debug("type: %d, number '%s'/'%s' <-> '%s'", connection->type, call_scramble_number(connection->local_number), call_scramble_number(tmp), call_scramble_number(numbers[count]));
+			gchar *scramble_number = call_scramble_number(numbers[count]);
+
+			g_debug("type: %d, number '%s'/'%s' <-> '%s'", connection->type, scramble_local, scramble_tmp, scramble_number);
+			g_free(scramble_number);
+
 			if (!strcmp(tmp, numbers[count])) {
 				found = TRUE;
 				break;
 			}
 		}
-		g_free(tmp);
-	}
 
-#ifdef ACCEPT_INTERN
-	if (!found && !strncmp(connection->local_number, "**", 2)) {
-		intern = TRUE;
-		found = TRUE;
+		g_free(tmp);
+		g_free(scramble_local);
+		g_free(scramble_tmp);
 	}
-#endif
 
 	/* No match found? -> exit */
 	if (!found) {
@@ -231,10 +216,14 @@ void gnotifications_connection_notify_cb(AppObject *obj, struct connection *conn
 	/* If its a disconnect or a connect, close previous gnotification window */
 	if ((connection->type & CONNECTION_TYPE_DISCONNECT) || (connection->type & CONNECTION_TYPE_CONNECT)) {
 		ringtone_stop();
-		if (connection->notification) {
-			g_object_unref(connection->notification);
-			connection->notification = NULL;
+
+		g_application_withdraw_notification(G_APPLICATION(roger_app), connection->notification);
+
+		if (connection->type == CONNECTION_TYPE_MISSED) {
+			missed_calls++;
+			gnotification_show_missed_calls();
 		}
+
 		return;
 	}
 
@@ -243,83 +232,13 @@ void gnotifications_connection_notify_cb(AppObject *obj, struct connection *conn
 	}
 
 	/** Ask for contact information */
-	contact = contact_find_by_number(connection->remote_number);
-
-	/* Create gnotification message */
-	if (!intern) {
-		text = g_markup_printf_escaped(_("Name:\t%s\nNumber:\t%s\nCompany:\t%s\nStreet:\t%s\nCity:\t\t%s%s%s"),
-		                               contact->name ? contact->name : "",
-		                               contact->number ? contact->number : "",
-		                               contact->company ? contact->company : "",
-		                               contact->street ? contact->street : "",
-		                               contact->zip ? contact->zip : "",
-		                               contact->zip ? " " : "",
-		                               contact->city ? contact->city : ""
-		                              );
-	} else {
-		text = g_markup_printf_escaped(_("Number:\t%s"), connection->local_number);
-	}
-	g_debug("text: '%s'", text);
-
-	if (connection->type == CONNECTION_TYPE_INCOMING) {
-		GFile *file;
-		GIcon *icon;
-
-		file = g_file_new_for_path("notification-message-roger-in.svg");
-		icon = g_file_icon_new(file);
-
-		notify = g_notification_new(_("Incoming call"));
-		g_notification_set_body(notify, text);
-		g_notification_set_icon(notify, G_ICON(icon));
-
-		g_notification_add_button_with_target(notify, _("Accept"), "app.pickup", "i", connection->id);
-		g_notification_add_button_with_target(notify, _("Decline"), "app.hangup", "i", connection->id);
-
-
-		//notify_gnotification_add_action(notify, "accept", _("Accept"), notify_accept_clicked_cb, connection, NULL);
-		//notify_gnotification_add_action(notify, "deny", _("Decline"), notify_deny_clicked_cb, connection, NULL);
-	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
-		GFile *file;
-		GIcon *icon;
-		gint duration = g_settings_get_int(gnotification_settings, "duration");
-
-		file = g_file_new_for_path("notification-message-roger-out.svg");
-		icon = g_file_icon_new(file);
-
-		notify = g_notification_new(_("Outgoing call"));
-		g_notification_set_body(notify, text);
-		g_notification_set_icon(notify, G_ICON(icon));
-
-		g_timeout_add_seconds(duration, gnotification_close, notify);
-	} else {
-		g_warning("Unhandled case in connection notify - gnotification!");
-		g_free(text);
-		return;
-	}
-
-	if (contact->image) {
-		GtkWidget *image;
-		GIcon *icon = NULL;
-
-		image = gtk_image_new_from_pixbuf(contact->image);
-		g_debug("image: %p", image),
-		gtk_image_get_gicon(GTK_IMAGE(image), &icon, NULL);
-		g_debug("icon: %p", icon),
-		g_notification_set_icon(notify, G_ICON(icon));
-	}
-
-	connection->notification = notify;
-
-	g_notification_set_priority(notify, G_NOTIFICATION_PRIORITY_URGENT);
-	g_application_send_notification(G_APPLICATION(application), "new-call", notify);
-	g_object_unref(notify);
+	struct contact *contact = contact_find_by_number(connection->remote_number);
 
 	if (EMPTY_STRING(contact->name)) {
-		g_debug("Starting lookup thread");
-		if (1==0)g_thread_new("gnotification reverse lookup", gnotification_reverse_lookup_thread, connection);
+		routermanager_lookup(contact->number, &contact->name, &contact->street, &contact->zip, &contact->city);
 	}
 
-	g_free(text);
+	gnotification_show(connection, contact);
 }
 
 /**
@@ -351,6 +270,8 @@ void impl_activate(PeasActivatable *plugin)
 void impl_deactivate(PeasActivatable *plugin)
 {
 	RouterManagerGNotificationPlugin *notify_plugin = ROUTERMANAGER_GNOTIFICATION_PLUGIN(plugin);
+
+	g_application_withdraw_notification(G_APPLICATION(roger_app), "missed-calls");
 
 	/* If signal handler is connected: disconnect */
 	if (g_signal_handler_is_connected(G_OBJECT(app_object), notify_plugin->priv->signal_id)) {

@@ -462,6 +462,16 @@ void filter_init(void)
 	filter_rule_add(filter, 0, CALL_TYPE_FAX_REPORT, NULL);
 	filter_add(filter);
 
+	/* Voice Record */
+	filter = filter_new(_("Record"));
+	filter_rule_add(filter, 0, CALL_TYPE_RECORD, NULL);
+	filter_add(filter);
+
+	/* Blocked calls */
+	filter = filter_new(_("Blocked"));
+	filter_rule_add(filter, 0, CALL_TYPE_BLOCKED, NULL);
+	filter_add(filter);
+
 }
 
 /**

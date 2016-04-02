@@ -2,7 +2,7 @@ plugin_in_files = fritzbox.plugin
 
 include ../Makefile.plugins
 
-plugindir = $(libdir)/routermanager/plugins/fritzbox
+plugindir = $(libdir)/routermanager/fritzbox
 
 plugin_LTLIBRARIES = libfritzbox.la
 
@@ -11,12 +11,14 @@ libfritzbox_la_SOURCES = \
 	fritzbox.h \
 	firmware-common.c \
 	firmware-common.h \
-	firmware-plain.c \
-	firmware-plain.h \
+	firmware-04-00.c \
+	firmware-04-00.h \
 	firmware-04-74.c \
 	firmware-04-74.h \
 	firmware-05-50.c \
 	firmware-05-50.h \
+	firmware-06-35.c \
+	firmware-06-35.h \
 	csv.c \
 	csv.h
 

@@ -17,15 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef FIRMWARE_PLAIN_H
-#define FIRMWARE_PLAIN_H
+#ifndef LIBROUTERMANAGER_SSDP_H
+#define LIBROUTERMANAGER_SSDP_H
 
-G_BEGIN_DECLS
-
-gboolean fritzbox_present_plain(struct router_info *router_info);
-gboolean fritzbox_login_plain(struct profile *profile);
-gboolean fritzbox_get_settings_plain(struct profile *profile);
-
-G_END_DECLS
+void ssdp_init(void);
+GList *ssdp_get_routers(void);
 
 #endif

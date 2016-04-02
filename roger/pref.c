@@ -37,6 +37,7 @@
 #include <roger/pref_prefix.h>
 #include <roger/pref_misc.h>
 #include <roger/uitools.h>
+#include <roger/application.h>
 
 static GtkWidget *dialog = NULL;
 
@@ -103,9 +104,17 @@ void preferences(void)
 	dialog = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(dialog), _("Preferences"));
 	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
-	gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
 	gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+	gtk_application_add_window(roger_app, GTK_WINDOW(dialog));
 	g_signal_connect(G_OBJECT(dialog), "destroy", G_CALLBACK(dialog_destroy_cb), NULL);
+
+	if (roger_uses_headerbar()) {
+		/* Create header bar and add it to the window */
+		GtkWidget *header_bar = gtk_header_bar_new();
+		gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
+		gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), _("Preferences"));
+		gtk_window_set_titlebar(GTK_WINDOW(dialog), header_bar);
+	}
 
 	page = pref_page_router();
 	pref_notebook_add_page(notebook, page, _("Router"));
@@ -134,13 +143,15 @@ void preferences(void)
 	page = pref_page_action();
 	pref_notebook_add_page(notebook, page, _("Actions"));
 
+#ifdef G_OS_WIN32
 	page = pref_page_misc();
 	pref_notebook_add_page(notebook, page, _("Misc"));
+#endif
 
-	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_LEFT);
+	//gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_LEFT);
 	gtk_container_add(GTK_CONTAINER(dialog), notebook);
 
-	gtk_window_set_default_size(GTK_WINDOW(dialog), 700, 430);
+	//gtk_window_set_default_size(GTK_WINDOW(dialog), 700, 430);
 
 	gtk_widget_show_all(dialog);
 }

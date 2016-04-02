@@ -204,6 +204,10 @@ static void *gstreamer_open(void)
 	GstElement *audio_sink;
 	GstElement *audio_source;
 	GstElement *pipe;
+	GstElement *filter;
+	GstElement *convert;
+	GstElement *resample;
+	GstCaps *filtercaps;
 	GstDevice *output_device = NULL;
 	GstDevice *input_device = NULL;
 	GList *list;
@@ -220,6 +224,8 @@ static void *gstreamer_open(void)
 	/* Get devices */
 	if (use_gst_device_monitor) {
 		gst_devices = gst_device_monitor_get_devices(monitor);
+
+		g_debug("%s(): Using device monitor based audio src/sink", __FUNCTION__);
 
 		/* Get preferred input/output device names */
 		output_name = g_settings_get_string(profile->settings, "audio-output");
@@ -246,86 +252,96 @@ static void *gstreamer_open(void)
 		audio_sink = gst_device_create_element(output_device, NULL);
 		audio_source = gst_device_create_element(input_device, NULL);
 	} else {
+		g_debug("%s(): Using auto audio src/sink", __FUNCTION__);
 		audio_sink = gst_element_factory_make("autoaudiosink", NULL);
 		audio_source = gst_element_factory_make("autoaudiosrc", NULL);
 	}
 
-	g_assert(audio_sink != NULL);
-	g_assert(audio_source != NULL);
-
 	/* Create output pipeline */
-	pipe = gst_pipeline_new("output");
-	g_assert(pipe != NULL);
+	if (audio_sink != NULL) {
+		pipe = gst_pipeline_new("output");
+		g_assert(pipe != NULL);
 
-	GstElement *source = gst_element_factory_make("appsrc", "routermanager_src");
-	g_assert(source != NULL);
+		GstElement *source = gst_element_factory_make("appsrc", "routermanager_src");
+		g_assert(source != NULL);
 
-	g_object_set(G_OBJECT(source),
-		"is-live", 1,
-		"format", 3,
-		"block", 1,
-		"max-bytes", 320,
-		NULL);
+		g_object_set(G_OBJECT(source),
+			"is-live", 1,
+			"format", 3,
+			"block", 1,
+			"max-bytes", 320,
+			NULL);
 
-	GstElement *filter = gst_element_factory_make("capsfilter", "filter");
+		filter = gst_element_factory_make("capsfilter", "filter");
 
-	GstCaps *filtercaps = gst_caps_new_simple("audio/x-raw",
-		"format", G_TYPE_STRING, "S16LE",
-		"channels", G_TYPE_INT, gstreamer_channels,
-		"rate", G_TYPE_INT, gstreamer_sample_rate,
-		NULL);
+		filtercaps = gst_caps_new_simple("audio/x-raw",
+			"format", G_TYPE_STRING, "S16LE",
+			"channels", G_TYPE_INT, gstreamer_channels,
+			"rate", G_TYPE_INT, gstreamer_sample_rate,
+			NULL);
 
-	g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
-	gst_caps_unref(filtercaps);
+		g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
+		gst_caps_unref(filtercaps);
 
-	gst_bin_add_many(GST_BIN(pipe), source, filter, audio_sink, NULL);
-	gst_element_link_many(source, filter, audio_sink, NULL);
+		convert = gst_element_factory_make("audioconvert", "convert");
+		resample = gst_element_factory_make("audioresample", "resample");
 
-	ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
-	if (ret == GST_STATE_CHANGE_FAILURE) {
-		g_warning("Error: cannot start pipeline => %d", ret);
-		return NULL;
+		gst_bin_add_many(GST_BIN(pipe), source, filter, convert, resample, audio_sink, NULL);
+		gst_element_link_many(source, filter, convert, resample, audio_sink, NULL);
+
+		ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
+		if (ret == GST_STATE_CHANGE_FAILURE) {
+			g_warning("Error: cannot start sink pipeline => %d", ret);
+			return NULL;
+		}
+
+		pipes->out_pipe = pipe;
+		pipes->out_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_src");
+		gstreamer_set_buffer_output_size(pipe, 160);
 	}
-
-	pipes->out_pipe = pipe;
-	pipes->out_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_src");
-	gstreamer_set_buffer_output_size(pipe, 160);
 
 	/* Create input pipeline */
-	pipe = gst_pipeline_new("input");
-	g_assert(pipe != NULL);
+	if (audio_source != NULL ) {
+		pipe = gst_pipeline_new("input");
+		g_assert(pipe != NULL);
 
-	sink = gst_element_factory_make("appsink", "routermanager_sink");
-	g_assert(sink != NULL);
+		sink = gst_element_factory_make("appsink", "routermanager_sink");
+		g_assert(sink != NULL);
 
-	g_object_set(G_OBJECT(sink),
-		"drop", 1,
-		"max-buffers", 2,
-		NULL);
+		g_object_set(G_OBJECT(sink),
+			"drop", 1,
+			"max-buffers", 2,
+			"sync", 1,
+			"qos", 1,
+			NULL);
 
-	filter = gst_element_factory_make("capsfilter", "filter");
+		filter = gst_element_factory_make("capsfilter", "filter");
 
-	filtercaps = gst_caps_new_simple("audio/x-raw",
-		"format", G_TYPE_STRING, "S16LE",
-		"channels", G_TYPE_INT, gstreamer_channels,
-		"rate", G_TYPE_INT, gstreamer_sample_rate,
-		NULL);
+		filtercaps = gst_caps_new_simple("audio/x-raw",
+			"format", G_TYPE_STRING, "S16LE",
+			"channels", G_TYPE_INT, gstreamer_channels,
+			"rate", G_TYPE_INT, gstreamer_sample_rate,
+			NULL);
 
-	g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
-	gst_caps_unref(filtercaps);
+		//g_object_set(G_OBJECT(filter), "caps", filtercaps, NULL);
+		gst_caps_unref(filtercaps);
 
-	gst_bin_add_many(GST_BIN(pipe), audio_source, filter, sink, NULL);
-	gst_element_link_many(audio_source, filter, sink, NULL);
+		convert = gst_element_factory_make("audioconvert", "convert");
+		resample = gst_element_factory_make("audioresample", "resample");
 
-	ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
-	if (ret == GST_STATE_CHANGE_FAILURE) {
-		g_warning("Error: cannot start pipeline => %d", ret);
-		return NULL;
+		gst_bin_add_many(GST_BIN(pipe), audio_source, convert, resample, filter, sink, NULL);
+		gst_element_link_many(audio_source, convert, resample, filter, sink, NULL);
+
+		ret = gst_element_set_state(pipe, GST_STATE_PLAYING);
+		if (ret == GST_STATE_CHANGE_FAILURE) {
+			g_warning("Error: cannot start source pipeline => %d", ret);
+			return NULL;
+		}
+
+		pipes->in_pipe = pipe;
+		pipes->in_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_sink");
+		gstreamer_set_buffer_input_size(pipe, 160);
 	}
-
-	pipes->in_pipe = pipe;
-	pipes->in_bin = gst_bin_get_by_name(GST_BIN(pipe), "routermanager_sink");
-	gstreamer_set_buffer_input_size(pipe, 160);
 
 	pipes->adapter = gst_adapter_new();
 
@@ -376,8 +392,10 @@ static gsize gstreamer_read(void *priv, guchar *data, gsize size)
 	}
 
 	read = MIN(gst_adapter_available(pipes->adapter), size);
-	gst_adapter_copy(pipes->adapter, data, 0, read);
-	gst_adapter_flush(pipes->adapter, read);
+	if (read != 0) {
+		gst_adapter_copy(pipes->adapter, data, 0, read);
+		gst_adapter_flush(pipes->adapter, read);
+	}
 
 	return read;
 }
@@ -391,20 +409,25 @@ int gstreamer_close(void *priv)
 {
 	struct pipes *pipes = priv;
 
+	g_debug("close");
 	if (pipes == NULL) {
 		return 0;
 	}
 
 	GstElement *src = pipes->out_bin;
 	if (src != NULL) {
+		g_debug("src close");
 		GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(pipes->out_pipe));
 		gst_bus_add_watch(bus, pipeline_cleaner, pipes->out_pipe);
 		gst_app_src_end_of_stream(GST_APP_SRC(src));
+		gst_element_set_state(pipes->out_pipe, GST_STATE_NULL);
 		gst_object_unref(bus);
+		gst_object_unref(pipes->out_pipe);
 		pipes->out_pipe = NULL;
 	}
 
 	if (pipes->in_pipe != NULL) {
+		g_debug("in close");
 		gst_element_set_state(pipes->in_pipe, GST_STATE_NULL);
 		gst_object_unref(pipes->in_pipe);
 		pipes->out_pipe = NULL;
@@ -412,6 +435,7 @@ int gstreamer_close(void *priv)
 
 	g_slice_free(struct pipes, pipes);
 	pipes = NULL;
+	g_debug("done");
 
 	return 0;
 }

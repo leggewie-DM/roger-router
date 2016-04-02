@@ -114,7 +114,8 @@ gboolean callmonitor_io_cb(GIOChannel *source, GIOCondition condition, gpointer 
 	case G_IO_PRI:
 		ret = g_io_channel_read_line(source, &msg, &len, NULL, &error);
 		if (ret != G_IO_STATUS_NORMAL) {
-			g_error("Error reading: %s", error->message);
+			g_error("Error reading: %s", error ? error->message : "?");
+			break;
 		}
 
 		gchar **lines = g_strsplit(msg, "\n", -1);
@@ -159,6 +160,7 @@ gboolean callmonitor_connect(gpointer user_data)
 	gint sock = -1;
 	const gchar *hostname;
 	gint tcp_keepalive_time = 600;
+	gboolean retry = TRUE;
 
 	profile = profile_get_active();
 	if (!profile) {
@@ -172,6 +174,7 @@ gboolean callmonitor_connect(gpointer user_data)
 		return FALSE;
 	}
 
+again:
 #ifdef CALLMONITOR_DEBUG
 	g_debug("Trying to connect to '%s' on port 1012", hostname);
 #endif
@@ -226,6 +229,15 @@ gboolean callmonitor_connect(gpointer user_data)
 		g_object_unref(sock_address);
 
 		g_resolver_free_addresses(list);
+
+		if (retry) {
+			router_dial_number(profile, PORT_ISDN1, "#96*5*");
+			g_usleep(G_USEC_PER_SEC * 2);
+			retry = FALSE;
+			error = NULL;
+			goto again;
+		}
+
 		return FALSE;
 	}
 

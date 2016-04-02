@@ -14,10 +14,7 @@
 #define HAVE_BIND_TEXTDOMAIN_CODESET 1
 
 /* Use new CAPI */
-#define HAVE_CAPI_36 1
-
-/* Use new CUPS backend */
-/* #undef HAVE_CUPS_BACKEND */
+/* #undef HAVE_CAPI_36 */
 
 /* Define to 1 if you have the `dcgettext' function. */
 #define HAVE_DCGETTEXT 1
@@ -25,17 +22,17 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
-/* Have libebook >= 3.5.4 */
-#define HAVE_EBOOK_SOURCE_REGISTRY 1
-
 /* Have faxophone */
 #define HAVE_FAXOPHONE 1
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #define HAVE_GETTEXT 1
 
+/* Have gnotification */
+#define HAVE_GNOTIFICATION 1
+
 /* Have gstreamer 1.0 */
-/* #undef HAVE_GSTREAMER1 */
+#define HAVE_GSTREAMER1 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -53,7 +50,7 @@
 #define HAVE_LIBM 1
 
 /* Have libnotify */
-#define HAVE_LIBNOTIFY 1
+/* #undef HAVE_LIBNOTIFY */
 
 /* Define to 1 if you have the `tiff' library (-ltiff). */
 #define HAVE_LIBTIFF 1
@@ -68,7 +65,7 @@
 /* #undef HAVE_PORTAUDIO */
 
 /* Have pulseaudio */
-#define HAVE_PULSEAUDIO 1
+/* #undef HAVE_PULSEAUDIO */
 
 /* Define to 1 if you have the `sigaction' function. */
 #define HAVE_SIGACTION 1
@@ -100,8 +97,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
 /* Name of package */
@@ -114,7 +110,7 @@
 #define PACKAGE_NAME "Roger Router"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Roger Router 1.8.11"
+#define PACKAGE_STRING "Roger Router 1.8.14"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "roger-router"
@@ -123,7 +119,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.8.11"
+#define PACKAGE_VERSION "1.8.14"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -135,4 +131,4 @@
 #define USE_PRINTER_SPOOLER 1
 
 /* Version number of package */
-#define VERSION "1.8.11"
+#define VERSION "1.8.14"

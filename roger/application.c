@@ -41,22 +41,19 @@
 
 #include <config.h>
 
-GtkApplication *application;
+GtkApplication *roger_app;
 static gboolean startup_called = FALSE;
 GSettings *app_settings = NULL;
 
 struct cmd_line_option_state {
 	gboolean debug;
+	gboolean start_hidden;
 	gboolean quit;
 	gchar *number;
+	gboolean assistant;
 };
 
 static struct cmd_line_option_state option_state;
-
-typedef GtkApplication Application;
-typedef GtkApplicationClass ApplicationClass;
-
-G_DEFINE_TYPE(Application, application, GTK_TYPE_APPLICATION)
 
 void app_show_contacts(void)
 {
@@ -75,8 +72,7 @@ void app_show_help(void)
 
 void app_quit(void)
 {
-	routermanager_shutdown();
-	g_application_quit(G_APPLICATION(application));
+	g_application_quit(G_APPLICATION(roger_app));
 }
 
 void app_copy_ip(void)
@@ -101,10 +97,9 @@ void app_reconnect(void)
 	router_reconnect(profile);
 }
 
-static void application_finalize(GObject *object)
+static void application_shutdown(GObject *object)
 {
 	routermanager_shutdown();
-	G_OBJECT_CLASS(application_parent_class)->finalize(object);
 }
 
 static void addressbook_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
@@ -114,7 +109,7 @@ static void addressbook_activated(GSimpleAction *action, GVariant *parameter, gp
 
 static void dialnumber_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	app_show_phone_window(NULL);
+	app_show_phone_window(NULL, NULL);
 }
 
 static void preferences_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
@@ -157,7 +152,6 @@ static void reconnect_activated(GSimpleAction *action, GVariant *parameter, gpoi
 
 static void pickup_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-#if 0
 	gint32 id = g_variant_get_int32(parameter);
 	struct connection *connection = connection_find_by_id(id);
 	struct contact *contact;
@@ -171,22 +165,12 @@ static void pickup_activated(GSimpleAction *action, GVariant *parameter, gpointe
 	//notify_gnotification_close(connection->notification, NULL);
 	connection->notification = NULL;
 
-	if (!connection->priv)
-		connection->priv = active_capi_connection;
-	}
-
 	/* Show phone window */
-	app_show_phone_window(contact);
-
-	/* Pickup phone and add connection */
-	phone_pickup(connection->priv);
-	phone_add_connection(connection->priv);
-#endif
+	app_show_phone_window(contact, connection);
 }
 
 static void hangup_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-#if 0
 	gint32 id = g_variant_get_int32(parameter);
 	struct connection *connection = connection_find_by_id(id);
 
@@ -195,12 +179,22 @@ static void hangup_activated(GSimpleAction *action, GVariant *parameter, gpointe
 	//notify_gnotification_close(connection->notification, NULL);
 	connection->notification = NULL;
 
-	if (!connection->priv)
+	if (!connection->priv) {
 		connection->priv = active_capi_connection;
 	}
 
 	phone_hangup(connection->priv);
-#endif
+}
+
+static void journal_activated(GSimpleAction *action, GVariant *parameter, gpointer user_data)
+{
+	GtkWidget *journal_win = journal_get_window();
+
+	if (gtk_widget_get_visible(GTK_WIDGET(journal_win))) {
+		gtk_window_present(GTK_WINDOW(journal_win));
+	} else {
+		gtk_widget_set_visible(GTK_WIDGET(journal_win), !gtk_widget_get_visible(GTK_WIDGET(journal_win)));
+	}
 }
 
 static GActionEntry apps_entries[] = {
@@ -215,28 +209,24 @@ static GActionEntry apps_entries[] = {
 	{"quit", quit_activated, NULL, NULL, NULL},
 	{"pickup", pickup_activated, "i", NULL, NULL},
 	{"hangup", hangup_activated, "i", NULL, NULL},
+	{"journal", journal_activated, NULL, NULL, NULL},
 };
 
-static void application_startup(GApplication *application)
+static void application_startup(GtkApplication *application)
 {
 	startup_called = TRUE;
-}
-
-static void application_init(Application *app)
-{
-	/* Do nothing */
 }
 
 static gboolean show_message(gpointer message_ptr)
 {
 	gchar *message = message_ptr;
 
-	GtkWidget *dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error"));
+	GtkWidget *dialog = gtk_message_dialog_new(roger_app ? gtk_application_get_active_window(roger_app) : NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error"));
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", message ? message : "");
 
 	g_signal_connect(dialog, "response", G_CALLBACK(gtk_widget_destroy), NULL);
 
-	gtk_widget_show(dialog);
+	gtk_window_present(GTK_WINDOW(dialog));
 
 	return FALSE;
 }
@@ -246,14 +236,36 @@ static void app_object_message_cb(AppObject *object, gint type, gchar *message)
 	g_idle_add(show_message, message);
 }
 
-static void app_init(Application *app)
+static void app_init(GtkApplication *app)
 {
 	GError *error = NULL;
 	GMenu *menu;
 	GMenu *section;
 	GMenu *sub_section;
 
-	g_action_map_add_action_entries(G_ACTION_MAP(application), apps_entries, G_N_ELEMENTS(apps_entries), application);
+#if GTK_CHECK_VERSION(3,14,0)
+	const gchar *accels[] = {NULL, NULL, NULL, NULL};
+
+	accels[0] = "<Control>p";
+	gtk_application_set_accels_for_action(app, "app.phone", accels);
+
+	accels[0] = "<Control>c";
+	gtk_application_set_accels_for_action(app, "app.addressbook", accels);
+
+	accels[0] = "<Control>q";
+	accels[1] = "<Control>w";
+	gtk_application_set_accels_for_action(app, "app.quit", accels);
+
+	accels[0] = "<Control>s";
+	gtk_application_set_accels_for_action(app, "app.preferences", accels);
+#else
+	gtk_application_add_accelerator(app, "<Control>p", "app.phone", NULL);
+	gtk_application_add_accelerator(app, "<Control>c", "app.addressbook", NULL);
+	gtk_application_add_accelerator(app, "<Control>q", "app.quit", NULL);
+	gtk_application_add_accelerator(app, "<Control>s", "app.preferences", NULL);
+#endif
+
+	g_action_map_add_action_entries(G_ACTION_MAP(app), apps_entries, G_N_ELEMENTS(apps_entries), app);
 
 	menu = g_menu_new();
 
@@ -284,7 +296,7 @@ static void app_init(Application *app)
 
 	g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
 
-	gtk_application_set_app_menu(GTK_APPLICATION(application), G_MENU_MODEL(menu));
+	gtk_application_set_app_menu(GTK_APPLICATION(app), G_MENU_MODEL(menu));
 
 	const gchar *user_plugins = g_get_user_data_dir();
 	gchar *path = g_build_filename(user_plugins, "roger", G_DIR_SEPARATOR_S, "plugins", NULL);
@@ -309,24 +321,22 @@ static void app_init(Application *app)
 
 	fax_process_init();
 
-	journal_window(G_APPLICATION(app), NULL);
+	if (option_state.start_hidden) {
+		journal_set_hide_on_start(TRUE);
+		journal_set_hide_on_quit(TRUE);
+	}
+
+	journal_window(G_APPLICATION(app));
 
 	if (net_is_online() && !profile_get_active()) {
 		assistant();
 	}
 
 #if 0
-	struct connection *connection = connection_add_call(2, CONNECTION_TYPE_INCOMING, "456789", "81570");
+	struct connection *connection = connection_add_call(2, CONNECTION_TYPE_INCOMING, "6173097", "08001888444");
 
 	emit_connection_notify(connection);
 #endif
-}
-
-static void application_class_init(ApplicationClass *class)
-{
-	GObjectClass *object_class = G_OBJECT_CLASS(class);
-
-	object_class->finalize = application_finalize;
 }
 
 G_GNUC_NORETURN static gboolean option_version_cb(const gchar *option_name, const gchar *value, gpointer data, GError **error)
@@ -337,9 +347,11 @@ G_GNUC_NORETURN static gboolean option_version_cb(const gchar *option_name, cons
 
 const GOptionEntry all_options[] = {
 	{"debug", 'd', 0, G_OPTION_ARG_NONE, &option_state.debug, "Enable debug", NULL},
+	{"hidden", 'i', 0, G_OPTION_ARG_NONE, &option_state.start_hidden, "Start with hidden window", NULL},
 	{"quit", 'q', 0, G_OPTION_ARG_NONE, &option_state.quit, "Quit", NULL},
 	{"call", 'c', 0, G_OPTION_ARG_STRING, &option_state.number, "Remote phone number", NULL},
 	{"version", 0, G_OPTION_FLAG_NO_ARG | G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_CALLBACK, option_version_cb, NULL, NULL},
+	{"assistant", 'a', 0, G_OPTION_ARG_NONE, &option_state.assistant, "Start assistant", NULL},
 	{NULL}
 };
 
@@ -355,7 +367,7 @@ GOptionContext *application_options_get_context(void)
 	return context;
 }
 
-static void application_options_process(Application *app, const struct cmd_line_option_state *options)
+static void application_options_process(GtkApplication *app, const struct cmd_line_option_state *options)
 {
 	if (options->quit) {
 		gdk_notify_startup_complete();
@@ -365,9 +377,8 @@ static void application_options_process(Application *app, const struct cmd_line_
 	g_settings_set_boolean(app_settings, "debug", options->debug);
 }
 
-static gint application_command_line_cb(GApplication *app, GApplicationCommandLine *command_line, gpointer data)
+static gint application_command_line_cb(GtkApplication *app, GApplicationCommandLine *command_line, gpointer data)
 {
-	Application *application = data;
 	GOptionContext *context;
 	int argc;
 	char **argv;
@@ -386,12 +397,16 @@ static gint application_command_line_cb(GApplication *app, GApplicationCommandLi
 
 	g_option_context_free(context);
 
-	application_options_process(application, &option_state);
+	application_options_process(app, &option_state);
 
+	g_debug("startup_called: %d", startup_called);
 	if (startup_called != FALSE) {
-		app_init(application);
+		app_init(app);
 		gdk_notify_startup_complete();
 		startup_called = FALSE;
+	} else {
+		extern GtkWidget *journal_win;
+		gtk_widget_set_visible(GTK_WIDGET(journal_win), TRUE);
 	}
 
 	if (option_state.number) {
@@ -404,8 +419,12 @@ static gint application_command_line_cb(GApplication *app, GApplicationCommandLi
 		/** Ask for contact information */
 		contact = contact_find_by_number(full_number);
 
-		app_show_phone_window(contact);
+		app_show_phone_window(contact, NULL);
 		g_free(full_number);
+	}
+
+	if (option_state.assistant) {
+		assistant();
 	}
 
 	g_strfreev(argv);
@@ -413,21 +432,26 @@ static gint application_command_line_cb(GApplication *app, GApplicationCommandLi
 	return 0;
 }
 
+static void application_activated(GtkApplication *app, gpointer data)
+{
+	g_debug("called");
+	journal_activated(NULL, NULL, NULL);
+}
+
 #define APP_GSETTINGS_SCHEMA "org.tabos.roger"
 
-Application *application_new(void)
+GtkApplication *application_new(void)
 {
 	g_set_prgname(PACKAGE_NAME);
 	g_set_application_name(PACKAGE_NAME);
 
-	application = g_object_new(application_get_type(),
-	                           "application-id", "org.tabos."PACKAGE,
-	                           "flags", G_APPLICATION_HANDLES_COMMAND_LINE,
-	                           NULL);
+	roger_app = gtk_application_new("org.tabos.roger", G_APPLICATION_HANDLES_COMMAND_LINE);
 
 	app_settings = rm_settings_new(APP_GSETTINGS_SCHEMA, NULL, "roger.conf");
-	g_signal_connect(application, "startup", G_CALLBACK(application_startup), application);
-	g_signal_connect(application, "command-line", G_CALLBACK(application_command_line_cb), application);
+	g_signal_connect(roger_app, "activate", G_CALLBACK(application_activated), roger_app);
+	g_signal_connect(roger_app, "startup", G_CALLBACK(application_startup), roger_app);
+	g_signal_connect(roger_app, "shutdown", G_CALLBACK(application_shutdown), roger_app);
+	g_signal_connect(roger_app, "command-line", G_CALLBACK(application_command_line_cb), roger_app);
 
-	return application;
+	return roger_app;
 }

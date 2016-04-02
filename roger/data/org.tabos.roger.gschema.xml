@@ -69,8 +69,8 @@
 			<default>true</default>
 		</key>
 
-		<key name="use-header" type="b">
-			<default>true</default>
+		<key name="contacts-hide-warning" type="b">
+			<default>false</default>
 		</key>
 	</schema>
 </schemalist>

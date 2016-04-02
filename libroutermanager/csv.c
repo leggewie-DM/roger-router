@@ -95,30 +95,20 @@ end:
 /**
  * \brief Save journal to local storage
  * \param journal journal list pointer
+ * \param filename file name to store journal to
  * \return TRUE on success, otherwise FALSE
  */
-gboolean csv_save_journal(GSList *journal)
+gboolean csv_save_journal_as(GSList *journal, gchar *file_name)
 {
 	GSList *list;
 	struct call *call;
-	struct profile *profile = profile_get_active();
 	FILE *file;
-	gchar *dir;
-	gchar *file_name;
-
-	/* Build directory name and create it (if needed) */
-	dir = g_build_filename(g_get_user_data_dir(), "routermanager", profile->name, NULL);
-	g_mkdir_with_parents(dir, 0700);
-
-	file_name = g_build_filename(dir, "journal.csv", NULL);
 
 	/* Open output file */
 	file = fopen(file_name, "wb+");
-	g_free(dir);
-	g_free(file_name);
 
 	if (!file) {
-		g_debug("Could not open journal output file");
+		g_debug("Could not open journal output file %s", file_name);
 		return FALSE;
 	}
 
@@ -129,7 +119,7 @@ gboolean csv_save_journal(GSList *journal)
 	for (list = journal; list; list = list->next) {
 		call = list->data;
 
-		if (call->type == CALL_TYPE_VOICE || call->type == CALL_TYPE_FAX || call->type == CALL_TYPE_FAX_REPORT) {
+		if (call->type != CALL_TYPE_INCOMING && call->type != CALL_TYPE_OUTGOING && call->type != CALL_TYPE_MISSED && call->type != CALL_TYPE_BLOCKED) {
 			continue;
 		}
 
@@ -148,6 +138,32 @@ gboolean csv_save_journal(GSList *journal)
 	fclose(file);
 
 	return TRUE;
+}
+
+/**
+ * \brief Save journal to local storage
+ * \param journal journal list pointer
+ * \return TRUE on success, otherwise FALSE
+ */
+gboolean csv_save_journal(GSList *journal)
+{
+	struct profile *profile = profile_get_active();
+	gchar *dir;
+	gchar *file_name;
+	gboolean ret;
+
+	/* Build directory name and create it (if needed) */
+	dir = g_build_filename(g_get_user_data_dir(), "routermanager", profile->name, NULL);
+	g_mkdir_with_parents(dir, 0700);
+
+	file_name = g_build_filename(dir, "journal.csv", NULL);
+
+	ret = csv_save_journal_as(journal, file_name);
+
+	g_free(dir);
+	g_free(file_name);
+
+	return ret;
 }
 
 /**
@@ -195,6 +211,7 @@ GSList *csv_load_journal(GSList *journal)
 	file_name = g_build_filename(g_get_user_data_dir(), "routermanager", profile->name, "journal.csv", NULL);
 	file_data = file_load(file_name, NULL);
 	g_free(file_name);
+
 	if (file_data) {
 		list = csv_parse_journal_data(journal, file_data);
 		g_free(file_data);

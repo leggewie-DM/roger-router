@@ -33,63 +33,9 @@
 #include <roger/print.h>
 #include <roger/fax.h>
 #include <roger/application.h>
+#include <roger/journal.h>
 
-static void capi_connection_established_cb(AppObject *object, struct capi_connection *connection, gpointer user_data)
-{
-	struct phone_state *state = user_data;
-	struct fax_ui *fax_ui = state->priv;
-
-	g_debug("capi_connection_established()");
-
-	fax_ui->fax_connection = connection;
-
-	snprintf(state->phone_status_text, sizeof(state->phone_status_text), _("Connected"));
-}
-
-static void capi_connection_terminated_cb(AppObject *object, struct capi_connection *connection, gpointer user_data)
-{
-	struct phone_state *state = user_data;
-	struct fax_ui *fax_ui = state->priv;
-	struct profile *profile = profile_get_active();
-	int reason;
-
-	g_debug("[%s]: connection %p, fax_connection %p", __FUNCTION__, connection, fax_ui ? fax_ui->fax_connection : NULL);
-
-	if (fax_ui->fax_connection != NULL && fax_ui->fax_connection != connection) {
-		return;
-	}
-
-	if (fax_ui->fax_connection == connection) {
-		g_debug("capi_connection_terminated_cb(): 0x%x/0x%x", connection->reason, connection->reason_b3);
-
-		switch (connection->reason) {
-			case 0x3490:
-			case 0x349f:
-				reason = connection->reason_b3;
-				break;
-			default:
-				reason = connection->reason;
-				break;
-		}
-
-		if (g_settings_get_boolean(profile->settings, "fax-sff")) {
-		if (reason == 0) {
-			g_debug("Fax transfer successful");
-			gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Fax transfer successful"));
-		} else {
-			gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Fax transfer failed"));
-			g_debug("Fax transfer failed");
-		}
-		}
-
-		g_print("Setting to disconnect");
-		snprintf(state->phone_status_text, sizeof(state->phone_status_text), _("Disconnected"));
-
-		phone_remove_connection(connection);
-		phone_remove_timer(state);
-		fax_ui->fax_connection = NULL;
-	}
-}
+#define FAX_SFF 1
 
 gboolean fax_update_ui(gpointer user_data)
 {
@@ -97,7 +43,6 @@ gboolean fax_update_ui(gpointer user_data)
 	struct fax_status *fax_status = fax_ui->status;
 	gchar buffer[256];
 	float percentage = 0.0f;
-	gchar text[6];
 	int percent = 0;
 	static int old_percent = 0;
 	gchar *tmp;
@@ -115,48 +60,45 @@ gboolean fax_update_ui(gpointer user_data)
 			old_percent = percent;
 
 			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fax_ui->progress_bar), percentage);
-
-			snprintf(text, sizeof(text), "%d%%", percent);
-			//g_debug("Transfer at %s", text);
-			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), text);
 		}
 	} else if (!fax_status->done) {
 		/* Update status information */
 		switch (fax_status->phase) {
 		case PHASE_B:
-			g_debug("PHASE_B");
+			g_debug("%s(): PHASE_B", __FUNCTION__);
 			tmp = g_convert_utf8(fax_status->remote_ident, -1);
-			g_debug("Ident: %s", tmp);
+			g_debug("%s(): Ident: %s", __FUNCTION__, tmp);
 			gtk_label_set_text(GTK_LABEL(fax_ui->remote_label), tmp);
 			g_free(tmp);
 
-			snprintf(buffer, sizeof(buffer), "%d/%d", fax_status->page_current, fax_status->page_total);
-			g_debug("Pages: %s", buffer);
+			snprintf(buffer, sizeof(buffer), _("Transferring page %d of %d"), fax_status->page_current, fax_status->page_total);
+			g_debug("%s(): %s", __FUNCTION__, buffer);
 			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fax_ui->progress_bar), 0);
-			gtk_label_set_text(GTK_LABEL(fax_ui->page_current_label), buffer);
-			gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Transfer starting"));
+			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), buffer);
 			break;
 		case PHASE_D:
-			snprintf(buffer, sizeof(buffer), "%d/%d", fax_status->page_current, fax_status->page_total);
-			g_debug("Pages: %s", buffer);
+			snprintf(buffer, sizeof(buffer), _("Transferring page %d of %d"), fax_status->page_current, fax_status->page_total);
+			g_debug("%s(): %s", __FUNCTION__, buffer);
+
 			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fax_ui->progress_bar), (float)fax_status->page_current / (float)fax_status->page_total);
-			gtk_label_set_text(GTK_LABEL(fax_ui->page_current_label), buffer);
-			gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Transferring page"));
+			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), buffer);
 			break;
 		case PHASE_E:
 			if (!fax_status->error_code) {
-				g_debug("Fax transfer successful");
-				gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Fax transfer successful"));
+				g_debug("%s(): Fax transfer successful", __FUNCTION__);
+				gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar),  _("Fax transfer successful"));
 			} else {
-				gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), _("Fax transfer failed"));
-				g_debug("Fax transfer failed");
+				gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), _("Fax transfer failed"));
+				g_debug("%s(): Fax transfer failed", __FUNCTION__);
 			}
-			create_fax_report(fax_status, g_settings_get_string(profile_get_active()->settings, "fax-report-dir"));
+			if (g_settings_get_boolean(profile_get_active()->settings, "fax-report")) {
+				create_fax_report(fax_status, g_settings_get_string(profile_get_active()->settings, "fax-report-dir"));
+			}
 			phone_hangup(fax_status->connection);
 			fax_status->done = TRUE;
 			break;
 		default:
-			g_debug("Unhandled phase (%d)", fax_status->phase);
+			g_debug("%s(): Unhandled phase (%d)", __FUNCTION__, fax_status->phase);
 			break;
 		}
 	}
@@ -164,9 +106,8 @@ gboolean fax_update_ui(gpointer user_data)
 	return FALSE;
 }
 
-void fax_connection_status_cb(AppObject *object, gint status, struct capi_connection *connection, gpointer user_data)
+void phone_fax_status(struct phone_state *state, struct capi_connection *connection)
 {
-	struct phone_state *state = user_data;
 	struct fax_ui *fax_ui = state->priv;
 
 	if (connection && connection->priv) {
@@ -178,29 +119,52 @@ void fax_connection_status_cb(AppObject *object, gint status, struct capi_connec
 	g_idle_add_full(G_PRIORITY_HIGH_IDLE, fax_update_ui, (gpointer)fax_ui, NULL);
 }
 
-gboolean fax_window_delete_event_cb(GtkWidget *widget, GdkEvent *event, gpointer data)
+/**
+ * \brief Create fax menu which contains fax selection and suppress number toggle
+ * \param profile pointer to current profile
+ * \param state phone state pointer
+ * \return newly create phone menu
+ */
+GtkWidget *phone_fax_create_menu(struct profile *profile, struct phone_state *state)
 {
-	struct phone_state *state = data;
-	struct fax_ui *fax_ui = state->priv;
+	GtkWidget *menu;
+	GtkWidget *item;
 
-	if (state && state->connection) {
-		GtkWidget *dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_WARNING, GTK_BUTTONS_YES_NO, "A call is in progress. Still close this window?");
-		gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
+	/* Create menu */
+	GtkWidget *box;
 
-		if (result != GTK_RESPONSE_YES) {
-			return TRUE;
-		}
+#if 0
+	menu = gtk_popover_new(NULL);
+#else
+	menu = gtk_menu_new();
+#endif
+	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+	gtk_widget_set_margin(box, 12, 12, 12, 12);
+	gtk_container_add(GTK_CONTAINER(menu), box);
 
-		phone_remove_timer(state);
+	/* Fill menu */
+	item = gtk_label_new(_("Fax devices"));
+	gtk_widget_set_sensitive(item, FALSE);
+	gtk_box_pack_start(GTK_BOX(box), item, FALSE, FALSE, 0);
 
-	}
+	/* Add fax as it is always present and has index 0 */
+	item = gtk_radio_button_new_with_label(NULL, g_settings_get_string(profile->settings, "fax-header"));
+	gtk_box_pack_start(GTK_BOX(box), item, FALSE, FALSE, 0);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(item), TRUE);
+	g_object_set_data(G_OBJECT(item), "phone_state", state);
 
-	g_signal_handlers_disconnect_by_data(app_object, state);
+	/* Add separator */
+	item = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_box_pack_start(GTK_BOX(box), item, FALSE, FALSE, 0);
 
-	g_unlink(fax_ui->file);
+	/* Add suppress check item */
+	item = gtk_check_button_new_with_label(_("Suppress number"));
+	g_settings_bind(profile->settings, "suppress", item, "active", G_SETTINGS_BIND_DEFAULT);
+	gtk_box_pack_start(GTK_BOX(box), item, FALSE, FALSE, 0);
 
-	return FALSE;
+	gtk_widget_show_all(box);
+
+	return menu;
 }
 
 void fax_window_clear(gpointer priv)
@@ -210,144 +174,86 @@ void fax_window_clear(gpointer priv)
 	gtk_label_set_text(GTK_LABEL(fax_ui->remote_label), "");
 	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fax_ui->progress_bar), 0);
 	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), "");
-	gtk_label_set_text(GTK_LABEL(fax_ui->page_current_label), "");
-	gtk_label_set_text(GTK_LABEL(fax_ui->status_current_label), "");
+}
+
+GtkWidget *fax_information_frame(struct phone_state *state)
+{
+	GtkWidget *frame;
+	GtkWidget *grid;
+	GtkWidget *remote_station_label;
+	GtkWidget *progress_label;
+	struct fax_ui *fax_ui = state->priv;
+	gint pos_y = 0;
+
+	/* Create frame */
+	frame = gtk_frame_new(NULL);
+	gtk_widget_set_vexpand(frame, TRUE);
+
+	/* Create inner grid */
+	grid = gtk_grid_new();
+	gtk_widget_set_hexpand(grid, FALSE);
+	gtk_widget_set_margin(grid, 12, 6, 12, 12);
+	gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
+	gtk_container_add(GTK_CONTAINER(frame), grid);
+
+	/* Set standard spacing */
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+	gtk_grid_set_column_spacing(GTK_GRID(grid), 6);
+
+	/* Add remote station line */
+	pos_y++;
+	remote_station_label = ui_label_new(_("From:"));
+	gtk_grid_attach(GTK_GRID(grid), remote_station_label, 0, pos_y, 1, 1);
+
+	fax_ui->remote_label = gtk_label_new(g_settings_get_string(profile_get_active()->settings, "fax-header"));
+	gtk_grid_attach(GTK_GRID(grid), fax_ui->remote_label, 1, pos_y, 1, 1);
+
+	/* Add remote station line */
+	pos_y++;
+	remote_station_label = ui_label_new(_("To:"));
+	gtk_grid_attach(GTK_GRID(grid), remote_station_label, 0, pos_y, 1, 1);
+
+	fax_ui->remote_label = gtk_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fax_ui->remote_label, 1, pos_y, 1, 1);
+
+	/* Add progress line */
+	pos_y++;
+	progress_label = ui_label_new(_("Status:"));
+	gtk_grid_attach(GTK_GRID(grid), progress_label, 0, pos_y, 1, 1);
+
+	fax_ui->progress_bar = gtk_progress_bar_new();
+	gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), TRUE);
+	gtk_widget_set_hexpand(fax_ui->progress_bar, TRUE);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), "");
+	gtk_grid_attach(GTK_GRID(grid), fax_ui->progress_bar, 1, pos_y, 1, 1);
+
+#ifdef FAX_SFF
+	if (g_settings_get_boolean(profile_get_active()->settings, "fax-sff")) {
+		gtk_widget_set_no_show_all(fax_ui->remote_label, TRUE);
+	}
+#endif
+
+	return frame;
 }
 
 void app_show_fax_window(gchar *fax_file)
 {
 	GtkWidget *window;
-	GtkWidget *grid;
-	GtkWidget *frame_grid;
-	GtkWidget *frame;
-	GtkWidget *status_label;
-	GtkWidget *progress_label;
-	GtkWidget *remote_station_label;
-	GtkWidget *pages_label;
-	gint pos_y = 0;
-	struct phone_state *state;
 	struct fax_ui *fax_ui;
 	struct profile *profile = profile_get_active();
+
+	if (!profile) {
+		return;
+	}
 
 	fax_ui = g_malloc0(sizeof(struct fax_ui));
 	fax_ui->file = fax_file;
 	fax_ui->status = g_malloc0(sizeof(struct fax_status));
 
-	state = g_malloc0(sizeof(struct phone_state));
-	state->type = PHONE_TYPE_FAX;
-	state->priv = fax_ui;
+	/* 450, 280 */
+	window = phone_window_new(PHONE_TYPE_FAX, NULL, NULL, fax_ui);
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), _("Fax"));
-	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-
-	grid = gtk_grid_new();
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
-
-	/**
-	 * Connect to: <ENTRY> <PICKUP-BUTTON> <HANGUP-BUTTON>
-	 * My number:  <ENTRY> <PHOTO>
-	 *
-	 * -- Information -------------------
-	 * | Status         : <LABEL>       |
-	 * | Pages          : <LABEL>       |
-	 * | Remote-Station : <LABEL>       |
-	 * | Progress       : <-----------> |
-	 * ----------------------------------
-	 */
-
-	pos_y++;
-	frame = gtk_frame_new(_("Information"));
-
-	frame_grid = gtk_grid_new();
-	gtk_widget_set_margin(frame_grid, 5, 0, 5, 5);
-
-	/* Set standard spacing to 5 */
-	gtk_grid_set_row_spacing(GTK_GRID(frame_grid), 5);
-	gtk_grid_set_column_spacing(GTK_GRID(frame_grid), 5);
-	gtk_container_set_border_width(GTK_CONTAINER(frame_grid), 2);
-
-	gtk_grid_attach(GTK_GRID(grid), frame, 0, pos_y, 3, 1);
-
-	pos_y++;
-	status_label = ui_label_new(_("Status:"));
-	gtk_grid_attach(GTK_GRID(frame_grid), status_label, 0, pos_y, 1, 1);
-
-	fax_ui->status_current_label = gtk_label_new("");
-	gtk_grid_attach(GTK_GRID(frame_grid), fax_ui->status_current_label, 1, pos_y, 1, 1);
-
-	pos_y++;
-	pages_label = ui_label_new(_("Current page:"));
-	gtk_grid_attach(GTK_GRID(frame_grid), pages_label, 0, pos_y, 1, 1);
-
-	fax_ui->page_current_label = gtk_label_new("");
-	gtk_grid_attach(GTK_GRID(frame_grid), fax_ui->page_current_label, 1, pos_y, 1, 1);
-
-	pos_y++;
-	remote_station_label = ui_label_new(_("Remote station:"));
-	gtk_grid_attach(GTK_GRID(frame_grid), remote_station_label, 0, pos_y, 1, 1);
-
-	fax_ui->remote_label = gtk_label_new("");
-	gtk_grid_attach(GTK_GRID(frame_grid), fax_ui->remote_label, 1, pos_y, 1, 1);
-
-	pos_y++;
-	progress_label = ui_label_new(_("Progress:"));
-	gtk_grid_attach(GTK_GRID(frame_grid), progress_label, 0, pos_y, 1, 1);
-
-	fax_ui->progress_bar = gtk_progress_bar_new();
-	gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), TRUE);
-	gtk_widget_set_hexpand(fax_ui->progress_bar, TRUE);
-	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), "0%");
-	gtk_grid_attach(GTK_GRID(frame_grid), fax_ui->progress_bar, 1, pos_y, 1, 1);
-
-	gtk_container_add(GTK_CONTAINER(frame), frame_grid);
-
-#if GTK_CHECK_VERSION(3,10,0)
-	state->use_header_bar = g_settings_get_boolean(app_settings, "use-header");
-
-	if (state->use_header_bar) {
-		/* Create header bar and set it to window */
-		GtkWidget *header = gtk_header_bar_new();
-
-		gtk_widget_set_hexpand(header, TRUE);
-		gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header), TRUE);
-		gtk_header_bar_set_title(GTK_HEADER_BAR (header), _("Fax"));
-		gtk_header_bar_set_subtitle(GTK_HEADER_BAR (header), _("Connection: Idle | Time: 00:00:00"));
-		gtk_window_set_titlebar((GtkWindow *)(window), header);
-
-		state->phone_status_label = header;
-	} else
-#endif
-	{
-		state->phone_status_label = gtk_label_new(_("Connection: Idle | Duration: 00:00:00"));
-		gtk_grid_attach(GTK_GRID(grid), state->phone_status_label, 0, 2, 3, 1);
-	}
-
-	/* We set the dial frame last, so that all other widgets are in place */
-	frame = phone_dial_frame(window, NULL, state);
-	gtk_grid_attach(GTK_GRID(grid), frame, 0, 0, 3, 1);
-
-	gtk_container_add(GTK_CONTAINER(window), grid);
-	gtk_container_set_border_width(GTK_CONTAINER(window), 5);
-
-	if (g_settings_get_boolean(profile->settings, "fax-sff")) {
-		gtk_widget_set_no_show_all(pages_label, TRUE);
-		gtk_widget_set_no_show_all(fax_ui->page_current_label, TRUE);
-		gtk_widget_set_no_show_all(remote_station_label, TRUE);
-		gtk_widget_set_no_show_all(fax_ui->remote_label, TRUE);
-	}
-
-	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-
-	g_signal_connect(G_OBJECT(window), "delete_event", G_CALLBACK(fax_window_delete_event_cb), state);
-
-	g_signal_connect(app_object, "connection-status", G_CALLBACK(fax_connection_status_cb), state);
-	g_signal_connect(app_object, "connection-established", G_CALLBACK(capi_connection_established_cb), state);
-	g_signal_connect(app_object, "connection-terminated", G_CALLBACK(capi_connection_terminated_cb), state);
-
-	gtk_widget_show_all(window);
+	//g_signal_connect(app_object, "connection-status", G_CALLBACK(fax_connection_status_cb), state);
 	gtk_window_set_keep_above(GTK_WINDOW(window), TRUE);
 }
 
@@ -381,10 +287,13 @@ gchar *convert_to_fax(gchar *file_name)
 	args[3] = "-dSAFER";
 	args[4] = "-dBATCH";
 
+#ifdef FAX_SFF
 	if (g_settings_get_boolean(profile->settings, "fax-sff")) {
 		args[5] = "-sDEVICE=cfax";
 		out_file = g_strdup_printf("%s.sff", file_name);
-	} else {
+	} else
+#endif
+	{
 		args[5] = "-sDEVICE=tiffg4";
 		out_file = g_strdup_printf("%s.tif", file_name);
 	}
@@ -445,3 +354,77 @@ void fax_process_init(void)
 {
 	g_signal_connect(app_object, "fax-process", G_CALLBACK(fax_process_cb), NULL);
 }
+
+gchar *phone_fax_get_title(void)
+{
+	return _("Fax");
+}
+
+gboolean phone_fax_init(struct contact *contact, struct connection *connection)
+{
+	return TRUE;
+}
+
+GtkWidget *phone_fax_create_child(struct phone_state *state, GtkWidget *grid)
+{
+	state->child_frame = fax_information_frame(state);
+	gtk_grid_attach(GTK_GRID(grid), state->child_frame, 0, 1, 2, 1);
+
+	return state->child_frame;
+}
+
+void phone_fax_terminated(struct phone_state *state, struct capi_connection *connection)
+{
+#ifdef FAX_SFF
+	struct fax_ui *fax_ui = state->priv;
+	struct profile *profile = profile_get_active();
+
+	if (g_settings_get_boolean(profile->settings, "fax-sff")) {
+		int reason;
+
+		g_debug("%s(): 0x%x/0x%x", __FUNCTION__, connection->reason, connection->reason_b3);
+
+		switch (connection->reason) {
+		case 0x3490:
+		case 0x349f:
+			reason = connection->reason_b3;
+			break;
+		default:
+			reason = connection->reason;
+			break;
+		}
+
+		if (reason == 0) {
+			g_debug("Fax transfer successful");
+			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), _("Fax transfer successful"));
+		} else {
+			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fax_ui->progress_bar), _("Fax transfer failed"));
+			g_debug("Fax transfer failed");
+		}
+	}
+#endif
+}
+
+void phone_fax_delete(struct phone_state *state)
+{
+	struct fax_ui *fax_ui = state->priv;
+
+	g_unlink(fax_ui->file);
+}
+
+struct phone_device phone_device_fax = {
+	/* Title */
+	phone_fax_get_title,
+	/* Init */
+	phone_fax_init,
+	/* Terminated */
+	phone_fax_terminated,
+	/* Create menu */
+	phone_fax_create_menu,
+	/* Create child */
+	phone_fax_create_child,
+	/* Delete */
+	phone_fax_delete,
+	/* Status */
+	phone_fax_status,
+};

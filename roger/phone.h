@@ -32,38 +32,54 @@ enum phone_type {
 };
 
 struct phone_state {
-	GtkWidget *dialpad_frame;
+	GtkWidget *window;
+
+	GtkWidget *child_frame;
 	GtkWidget *control_frame;
 	GtkWidget *call_frame;
-	GtkWidget *phone_status_label;
-	GtkWidget *name_entry;
-	GtkWidget *photo_image;
-	GtkWidget *llevel_in;
-	GtkWidget *llevel_out;
-	GtkWidget *call_label;
-	GtkWidget *port_combobox;
-	GtkWidget *number_combobox;
-	gchar phone_status_text[255];
+	GtkWidget *header_bar;
+	GtkWidget *search_entry;
+	GtkWidget *mute_button;
+	GtkWidget *hold_button;
+	GtkWidget *record_button;
+	GtkWidget *pickup_button;
+	GtkWidget *hangup_button;
+
+	GtkWidget *contact_menu;
+	GtkWidget *scrolled_win;
+	GtkWidget *box;
+	const gchar *filter;
+	gboolean discard;
+
 	GTimer *phone_session_timer;
 	gint phone_session_timer_id;
-	gboolean use_header_bar;
 
 	const gchar *number;
-	struct connection *connection;
+	gpointer connection;
 
 	gpointer priv;
 
 	enum phone_type type;
 };
 
-void app_show_phone_window(struct contact *contact);
-GtkWidget *phone_dial_frame(GtkWidget *window, struct contact *contact, struct phone_state *state);
+struct phone_device {
+	gchar *(*get_title)(void);
+	gboolean (*init)(struct contact *contact, struct connection *connection);
+	void (*terminated)(struct phone_state *state, struct capi_connection *connection);
+	GtkWidget *(*create_menu)(struct profile *profile, struct phone_state *state);
+	GtkWidget *(*create_child)(struct phone_state *state, GtkWidget *grid);
+	void (*delete)(struct phone_state *state);
+	void (*status)(struct phone_state *state, struct capi_connection *connection);
+};
+
+void app_show_phone_window(struct contact *contact, struct connection *connection);
+GtkWidget *phone_search_entry_new(GtkWidget *window, struct contact *contact, struct phone_state *state);
 void phone_call_notify_cb(AppObject *object, struct call *call, gint connection, gchar *medium, gpointer user_data);
-gboolean phone_window_delete_event_cb(GtkWidget *widget, GdkEvent *event, gpointer data);
 void phone_setup_timer(struct phone_state *state);
 void phone_remove_timer(struct phone_state *state);
-void phone_add_connection(gpointer connection);
-void phone_remove_connection(gpointer connection);
+GtkWidget *phone_dial_buttons_new(GtkWidget *window, struct phone_state *state);
+void phone_dial_buttons_set_dial(struct phone_state *state, gboolean allow);
+GtkWidget *phone_window_new(enum phone_type type, struct contact *contact, struct connection *connection, gpointer priv);
 
 G_END_DECLS
 

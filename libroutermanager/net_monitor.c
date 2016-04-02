@@ -20,6 +20,7 @@
 #include <gio/gio.h>
 #include <libroutermanager/net_monitor.h>
 #include <libroutermanager/profile.h>
+#include <libroutermanager/ssdp.h>
 
 /** Internal network event list */
 static GSList *net_event_list = NULL;
@@ -105,7 +106,8 @@ void net_monitor_state_changed(gboolean state)
 	GSList *list;
 
 	/* Compare internal and new network state, only handle new states */
-	if (net_online == state) {
+	if ((net_online == state) && (!state || profile_get_active())) {
+		g_debug("Network state repeated, ignored (%s)", net_state(state));
 		return;
 	}
 
@@ -147,7 +149,13 @@ void net_monitor_reconnect(void)
 	GNetworkMonitor *monitor = g_network_monitor_get_default();
 
 	net_monitor_state_changed(FALSE);
+
+#if GLIB_CHECK_VERSION(2,44,0)
+	net_monitor_state_changed(g_network_monitor_get_connectivity(monitor) != G_NETWORK_CONNECTIVITY_LOCAL);
+#else
 	net_monitor_state_changed(g_network_monitor_get_network_available(monitor));
+#endif
+
 #else
 	net_monitor_state_changed(FALSE);
 	net_monitor_state_changed(TRUE);
@@ -179,7 +187,13 @@ gboolean net_monitor_init(void)
 	/* Connect signal handler */
 	g_signal_connect(monitor, "network-changed", G_CALLBACK(net_monitor_changed_cb), NULL);
 
+	ssdp_init();
+
+#if GLIB_CHECK_VERSION(2,44,0)
+	net_monitor_state_changed(g_network_monitor_get_connectivity(monitor) != G_NETWORK_CONNECTIVITY_LOCAL);
+#else
 	net_monitor_state_changed(g_network_monitor_get_network_available(monitor));
+#endif
 #else
 	net_monitor_state_changed(TRUE);
 #endif

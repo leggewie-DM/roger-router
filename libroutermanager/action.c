@@ -82,8 +82,9 @@ static gchar *action_regex(gchar *str, struct connection *connection)
 static inline gboolean action_check_number(const gchar *local_number, gchar **numbers)
 {
 	guint i;
+	guint len = g_strv_length(numbers);
 
-	for (i = 0; i < g_strv_length(numbers); i++) {
+	for (i = 0; i < len; i++) {
 		if (!strcmp(local_number, numbers[i])) {
 			return TRUE;
 		}
@@ -127,7 +128,7 @@ void action_connection_notify_cb(AppObject *object, struct connection *connectio
 		    /* Outgoing connection */
 		    ((connection->type == CONNECTION_TYPE_OUTGOING) && (action->flags & ACTION_OUTGOING_DIAL)) ||
 		    /* Incoming connection missed */
-		    ((connection->type == CONNECTION_TYPE_MISS) && (action->flags & ACTION_INCOMING_MISSED)) ||
+		    ((connection->type == CONNECTION_TYPE_MISSED) && (action->flags & ACTION_INCOMING_MISSED)) ||
 		    /* Incoming connection established */
 		    ((connection->type == (CONNECTION_TYPE_INCOMING | CONNECTION_TYPE_CONNECT)) && (action->flags & ACTION_INCOMING_BEGIN)) ||
 		    /* Outgoing connection established */
@@ -155,11 +156,7 @@ void action_connection_notify_cb(AppObject *object, struct connection *connectio
  */
 struct action *action_create(void)
 {
-	struct action *action = g_slice_new(struct action);
-
-	memset(action, 0, sizeof(struct action));
-
-	return action;
+	return g_slice_new0(struct action);
 }
 
 /**
@@ -220,13 +217,13 @@ void action_commit(struct profile *profile)
 	for (list = profile->action_list; list; list = list->next) {
 		struct action *current_action = list->data;
 
-		actions[counter++] = current_action->name;
+		actions[counter++] = g_strdup(current_action->name);
 	}
 	actions[counter] = NULL;
 
 	g_settings_set_strv(profile->settings, "actions", (const gchar * const *)actions);
 
-	//g_strfreev(actions);
+	g_strfreev(actions);
 }
 
 /**
@@ -260,10 +257,23 @@ void action_free(gpointer data)
 	struct action *action = data;
 
 	/* Free action data */
-	g_free(action->name);
-	g_free(action->description);
-	g_free(action->exec);
-	g_strfreev(action->numbers);
+	if (action->name) {
+		g_free(action->name);
+		action->name = NULL;
+	}
+	if (action->description) {
+		g_free(action->description);
+		action->description = NULL;
+	}
+	if (action->exec) {
+		g_free(action->exec);
+		action->exec = NULL;
+	}
+
+	if (action->numbers) {
+		g_strfreev(action->numbers);
+		action->numbers = NULL;
+	}
 
 	g_slice_free(struct action, action);
 }
@@ -340,4 +350,5 @@ void action_shutdown(struct profile *profile)
 
 	/* Clear action list */
 	g_slist_free_full(profile->action_list, action_free);
+	profile->action_list = NULL;
 }

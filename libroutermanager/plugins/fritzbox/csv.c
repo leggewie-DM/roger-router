@@ -51,7 +51,16 @@ static inline gpointer csv_parse_fritzbox(gpointer ptr, gchar **split)
 		case 2:
 			call_type = CALL_TYPE_MISSED;
 			break;
-		case 3:
+		case 3: {
+			struct profile *profile = profile_get_active();
+
+			if (FIRMWARE_IS(4, 74)) {
+				call_type = CALL_TYPE_BLOCKED;
+			} else {
+				call_type = CALL_TYPE_OUTGOING;
+			}
+			break;
+		}
 		case 4:
 			call_type = CALL_TYPE_OUTGOING;
 			break;
@@ -77,6 +86,9 @@ GSList *csv_parse_fritzbox_journal_data(GSList *list, const gchar *data)
 		new_list = csv_parse_data(data, CSV_FRITZBOX_JOURNAL_EN, csv_parse_fritzbox, list);
 		if (!new_list) {
 			new_list = csv_parse_data(data, CSV_FRITZBOX_JOURNAL_EN2, csv_parse_fritzbox, list);
+			if (!new_list) {
+				new_list = csv_parse_data(data, CSV_FRITZBOX_JOURNAL_EN3, csv_parse_fritzbox, list);
+			}
 		}
 	}
 

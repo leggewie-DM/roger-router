@@ -49,6 +49,7 @@ void routermanager_plugins_add_search_path(gchar *path)
 static void plugins_extension_added_cb(PeasExtensionSet *set, PeasPluginInfo *info, PeasExtension *exten, gpointer unused)
 {
 	/* Active plugin now */
+	g_debug(" + %s (%s) activated", peas_plugin_info_get_name(info), peas_plugin_info_get_module_name(info));
 	peas_activatable_activate(PEAS_ACTIVATABLE(exten));
 }
 
@@ -62,6 +63,9 @@ static void plugins_extension_added_cb(PeasExtensionSet *set, PeasPluginInfo *in
 static void plugins_extension_removed_cb(PeasExtensionSet *set, PeasPluginInfo *info, PeasExtension *exten, gpointer unused)
 {
 	/* Remove plugin now */
+	if (!peas_plugin_info_is_builtin(info)) {
+		g_debug(" - %s (%s) deactivated", peas_plugin_info_get_name(info), peas_plugin_info_get_module_name(info));
+	}
 	peas_activatable_deactivate(PEAS_ACTIVATABLE(exten));
 }
 
@@ -84,7 +88,7 @@ void plugins_init(void)
 	g_signal_connect(exten, "extension-removed", G_CALLBACK(plugins_extension_removed_cb), NULL);
 
 	/* Look for plugins in plugin_dir */
-	peas_engine_add_search_path(engine, ROUTERMANAGER_PLUGINS "/plugins/", ROUTERMANAGER_PLUGINS "/plugins/");
+	peas_engine_add_search_path(engine, ROUTERMANAGER_PLUGINS, ROUTERMANAGER_PLUGINS);
 
 	/* And all other directories */
 	for (slist = search_path_list; slist != NULL; slist = slist->next) {
@@ -93,9 +97,8 @@ void plugins_init(void)
 		peas_engine_add_search_path(engine, plugin_dir, plugin_dir);
 	}
 
-	/* In addition to C we want to support python and javascript plugins */
+	/* In addition to C we want to support python plugins */
 	peas_engine_enable_loader(engine, "python");
-	peas_engine_enable_loader(engine, "gjs");
 
 	/* Traverse through detected plugins and loaded builtin plugins now */
 	for (list = peas_engine_get_plugin_list(engine); list != NULL; list = list->next) {

@@ -17,12 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef SPEEDPORT_H
-#define SPEEDPORT_H
-
-#include <libroutermanager/router.h>
+#ifndef FIRMWARE_06_35_H
+#define FIRMWARE_06_35_H
 
 G_BEGIN_DECLS
+
+gboolean fritzbox_get_settings_06_35(struct profile *profile);
+gboolean fritzbox_dial_number_06_35(struct profile *profile, gint port, const gchar *number);
+gboolean fritzbox_hangup_06_35(struct profile *profile, gint port, const gchar *number);
 
 G_END_DECLS
 

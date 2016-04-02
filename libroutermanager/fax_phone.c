@@ -52,9 +52,10 @@ struct capi_connection *active_capi_connection = NULL;
  * \brief Dial number via fax
  * \param tiff tiff file name
  * \param trg_no target number
+ * \param suppress suppress number flag
  * \return capi connection pointer
  */
-struct capi_connection *fax_dial(gchar *tiff, const gchar *trg_no)
+struct capi_connection *fax_dial(gchar *tiff, const gchar *trg_no, gboolean suppress)
 {
 	struct profile *profile = profile_get_active();
 	gint modem = g_settings_get_int(profile->settings, "fax-bitrate");
@@ -83,9 +84,9 @@ struct capi_connection *fax_dial(gchar *tiff, const gchar *trg_no)
 	}
 
 	if (g_settings_get_boolean(profile->settings, "fax-sff")) {
-		connection = sff_send(tiff, modem, ecm, controller, src_no, target, ident, header, 0);
+		connection = sff_send(tiff, modem, ecm, controller, src_no, target, ident, header, suppress);
 	} else {
-		connection = fax_send(tiff, modem, ecm, controller, cip, src_no, target, ident, header, 0);
+		connection = fax_send(tiff, modem, ecm, controller, cip, src_no, target, ident, header, suppress);
 	}
 	g_free(target);
 
@@ -150,11 +151,9 @@ void connection_ring(struct capi_connection *capi_connection)
 
 	g_debug("connection_ring() src %s trg %s", capi_connection->source, capi_connection->target);
 	connection = connection_find_by_number(capi_connection->source);
-#if ACCEPT_INERN
+#if ACCEPT_INTERN
 	if (!connection && !strncmp(capi_connection->source, "**", 2)) {
 		connection = connection_add_call(981, CONNECTION_TYPE_INCOMING, capi_connection->source, capi_connection->target);
-
-		emit_connection_notify(connection);
 	}
 #endif
 
@@ -162,6 +161,8 @@ void connection_ring(struct capi_connection *capi_connection)
 	if (connection) {
 		g_debug("connection_ring() set capi_connection %p", capi_connection);
 		connection->priv = capi_connection;
+
+		emit_connection_notify(connection);
 	}
 }
 
@@ -206,8 +207,17 @@ struct session_handlers session_handlers = {
 gboolean faxophone_connect(gpointer user_data)
 {
 	struct profile *profile = profile_get_active();
+	gboolean retry = TRUE;
 
+again:
 	session = faxophone_init(&session_handlers, router_get_host(profile), g_settings_get_int(profile->settings, "phone-controller") + 1);
+	if (!session && retry) {
+		/* Maybe the port is closed, try to activate it and try again */
+		router_dial_number(profile, PORT_ISDN1, "#96*3*");
+		g_usleep(G_USEC_PER_SEC * 2);
+		retry = FALSE;
+		goto again;
+	}
 
 	return session != NULL;
 }

@@ -35,10 +35,10 @@
 
 #include "fritzbox.h"
 #include "firmware-common.h"
-#include "firmware-plain.h"
+#include "firmware-04-00.h"
 
 /** phone port names */
-struct phone_port fritzbox_phone_ports[NUM_PHONE_PORTS] = {
+struct phone_port fritzbox_phone_ports[PORT_MAX] = {
 	/* Analog */
 	{"telcfg:settings/MSN/Port0/Name", PORT_ANALOG1, 1},
 	{"telcfg:settings/MSN/Port1/Name", PORT_ANALOG2, 2},
@@ -118,6 +118,54 @@ gchar *xml_extract_tag(const gchar *data, gchar *tag)
 }
 
 /**
+ * \brief Extract XML Tags: <TAG>VALUE</TAG>
+ * \param data data to parse
+ * \param tag tag to extract
+ * \return tag values
+ */
+gchar **xml_extract_tags(const gchar *data, gchar *tag_start, gchar *tag_end)
+{
+	gchar *regex_str = g_strdup_printf("<%s>[^<]*</%s>", tag_start, tag_end);
+	GRegex *regex = NULL;
+	GError *error = NULL;
+	GMatchInfo *match_info;
+	gchar **entries = NULL;
+	gint index = 0;
+
+	regex = g_regex_new(regex_str, 0, 0, &error);
+	g_assert(regex != NULL);
+
+	g_regex_match(regex, data, 0, &match_info);
+
+	while (match_info && g_match_info_matches(match_info)) {
+		gint start;
+		gint end;
+		gboolean fetched = g_match_info_fetch_pos(match_info, 0, &start, &end);
+
+		if (fetched == TRUE) {
+			gchar *tag_start_pos = strchr(data + start, '>');
+			gchar *tag_end_pos = strchr(tag_start_pos + 1, '<');
+			gint entry_size = tag_end_pos - tag_start_pos - 1;
+
+			entries = g_realloc(entries, (index + 2) * sizeof(gchar *));
+			entries[index] = g_malloc0(entry_size + 1);
+			strncpy(entries[index], tag_start_pos + 1, entry_size);
+			entries[index + 1] = NULL;
+			index++;
+		}
+
+		if (g_match_info_next(match_info, NULL) == FALSE) {
+			break;
+		}
+	}
+
+	g_match_info_free(match_info);
+	g_free(regex_str);
+
+	return entries;
+}
+
+/**
  * \brief Extract XML input tag: name="TAG" ... value="VALUE"
  * \param data data to parse
  * \param tag tag to extract
@@ -138,6 +186,42 @@ gchar *xml_extract_input_value(const gchar *data, gchar *tag)
 	}
 
 	val_start = g_strstr_len(start, -1, "value=\"");
+	g_assert(val_start != NULL);
+
+	val_start += 7;
+
+	val_end = g_strstr_len(val_start, -1, "\"");
+
+	val_size = val_end - val_start;
+	g_assert(val_size >= 0);
+
+	value = g_malloc0(val_size + 1);
+	memcpy(value, val_start, val_size);
+
+	return value;
+}
+
+/**
+ * \brief Extract XML input tag reverse: name="TAG" ... value="VALUE"
+ * \param data data to parse
+ * \param tag tag to extract
+ * \return tag value
+ */
+gchar *xml_extract_input_value_r(const gchar *data, gchar *tag)
+{
+	gchar *name = g_strdup_printf("name=\"%s\"", tag);
+	gchar *start = g_strstr_len(data, -1, name);
+	gchar *val_start = NULL;
+	gchar *val_end = NULL;
+	gchar *value = NULL;
+	gssize val_size;
+
+	g_free(name);
+	if (start == NULL) {
+		return NULL;
+	}
+
+	val_start = g_strrstr_len(data, start - data, "value=\"");
 	g_assert(val_start != NULL);
 
 	val_start += 7;
@@ -243,6 +327,33 @@ gchar *html_extract_assignment(const gchar *data, gchar *tag, gboolean p)
 	return value;
 }
 
+
+/**
+ * \brief Remove duplicate entries from string array
+ * \param numbers input string array
+ * \return duplicate free string array
+ */
+gchar **strv_remove_duplicates(gchar **numbers)
+{
+	gchar **ret = NULL;
+	gint len = g_strv_length(numbers);
+	gint idx;
+	gint ret_idx = 1;
+
+	for (idx = 0; idx < len; idx++) {
+		if (!ret || !strv_contains((const gchar * const *)ret, numbers[idx])) {
+			ret = g_realloc(ret, (ret_idx + 1) * sizeof(char *));
+			ret[ret_idx - 1] = g_strdup(numbers[idx]);
+			ret[ret_idx] = NULL;
+
+			ret_idx++;
+		}
+	}
+
+	return ret;
+}
+
+
 /**
  * \brief Check if a FRITZ!Box router is present
  * \param router_info - router information structure
@@ -283,9 +394,9 @@ gboolean fritzbox_present(struct router_info *router_info)
 		g_free(url);
 
 		if (msg->status_code == 404) {
-			ret = fritzbox_present_plain(router_info);
+			ret = fritzbox_present_04_00(router_info);
 		} else {
-			g_warning("Could not read boxinfo file (Error: %d)", msg->status_code);
+			g_warning("Could not read boxinfo file (Error: %d, %s)", msg->status_code, soup_status_get_phrase(msg->status_code));
 		}
 
 		return ret;
@@ -367,8 +478,10 @@ gboolean fritzbox_logout(struct profile *profile, gboolean force)
 		return FALSE;
 	}
 
-	g_timer_destroy(profile->router_info->session_timer);
-	profile->router_info->session_timer = NULL;
+	if (profile->router_info->session_timer != NULL) {
+		g_timer_destroy(profile->router_info->session_timer);
+		profile->router_info->session_timer = NULL;
+	}
 
 	g_object_unref(msg);
 	g_debug("Logout successful");
@@ -472,114 +585,22 @@ void fritzbox_read_msn(struct profile *profile, const gchar *data)
 	}
 }
 
-
-/**
- * \brief Dial number callback function (logout from box)
- * \param session soup session
- * \param msg soup message
- * \param user_data pointer to profile structure
- */
-static void dial_number_cb(SoupSession *session, SoupMessage *msg, gpointer user_data)
-{
-	struct profile *profile = user_data;
-
-	/* Logout */
-	fritzbox_logout(profile, FALSE);
-}
-
 /**
  * \brief Depending on type get dialport
  * \param type phone type
  * \return dialport
  */
-static gint fritzbox_get_dialport(gint type)
+gint fritzbox_get_dialport(gint type)
 {
 	gint index;
 
-	for (index = 0; index < NUM_PHONE_PORTS; index++) {
+	for (index = 0; index < PORT_MAX; index++) {
 		if (fritzbox_phone_ports[index].type == type) {
 			return fritzbox_phone_ports[index].number;
 		}
 	}
 
 	return -1;
-}
-
-/**
- * \brief Dial number using ClickToDial
- * \param profile profile information structure
- * \param port dial port
- * \param number remote number
- * \return TRUE on success, otherwise FALSE
- */
-gboolean fritzbox_dial_number(struct profile *profile, gint port, const gchar *number)
-{
-	SoupMessage *msg;
-	gchar *port_str;
-
-	/* Login to box */
-	if (fritzbox_login(profile) == FALSE) {
-		return FALSE;
-	}
-
-	/* Create POST message */
-	gchar *url = g_strdup_printf("http://%s/cgi-bin/webcm", router_get_host(profile));
-	port_str = g_strdup_printf("%d", fritzbox_get_dialport(port));
-
-	g_debug("Call number '%s' on port %s...", call_scramble_number(number), port_str);
-
-	msg = soup_form_request_new(SOUP_METHOD_POST, url,
-	                            "telcfg:settings/UseClickToDial", "1",
-	                            "telcfg:settings/DialPort", port_str,
-	                            "telcfg:command/Dial", number,
-	                            "sid", profile->router_info->session_id,
-	                            NULL);
-	g_free(port_str);
-	g_free(url);
-
-	/* Add message to queue */
-	soup_session_queue_message(soup_session_async, msg, dial_number_cb, profile);
-
-	return TRUE;
-}
-
-
-/**
- * \brief Hangup call
- * \param profile profile information structure
- * \param port dial port
- * \param number remote number
- * \return TRUE on success, otherwise FALSE
- */
-gboolean fritzbox_hangup(struct profile *profile, gint port, const gchar *number)
-{
-	SoupMessage *msg;
-	gchar *port_str;
-
-	/* Login to box */
-	if (fritzbox_login(profile) == FALSE) {
-		return FALSE;
-	}
-
-	/* Create POST message */
-	gchar *url = g_strdup_printf("http://%s/cgi-bin/webcm", router_get_host(profile));
-	port_str = g_strdup_printf("%d", fritzbox_get_dialport(port));
-
-	g_debug("Hangup on port %s...", port_str);
-
-	msg = soup_form_request_new(SOUP_METHOD_POST, url,
-	                            "telcfg:settings/UseClickToDial", "1",
-	                            "telcfg:settings/DialPort", port_str,
-	                            "telcfg:command/Hangup", number,
-	                            "sid", profile->router_info->session_id,
-	                            NULL);
-	g_free(port_str);
-	g_free(url);
-
-	/* Add message to queue */
-	soup_session_queue_message(soup_session_async, msg, dial_number_cb, profile);
-
-	return TRUE;
 }
 
 /**
@@ -834,7 +855,7 @@ gint fritzbox_find_phone_port(gint dial_port)
 {
 	gint index;
 
-	for (index = 0; index < NUM_PHONE_PORTS; index++) {
+	for (index = 0; index < PORT_MAX; index++) {
 		if (fritzbox_phone_ports[index].number == dial_port) {
 			return fritzbox_phone_ports[index].type;
 		}
@@ -888,6 +909,8 @@ gchar *fritzbox_get_ip(struct profile *profile)
 		g_object_unref(msg);
 		return NULL;
 	}
+
+	g_debug("buffer: %s\n\n", msg->response_body->data);
 
 	ip = xml_extract_tag(msg->response_body->data, "NewExternalIPAddress");
 
@@ -1041,3 +1064,24 @@ gboolean fritzbox_delete_voice(struct profile *profile, const gchar *filename)
 
 	return TRUE;
 }
+
+/**
+ * \brief Checks if @strv contains @str. @strv must not be %NULL.
+ * \strv a %NULL-terminated array of strings
+ * \str a string
+ * \return %TRUE if @str is an element of @strv, according to g_str_equal().
+ */
+gboolean strv_contains(const gchar *const *strv, const gchar *str)
+{
+	g_return_val_if_fail(strv != NULL, FALSE);
+	g_return_val_if_fail(str != NULL, FALSE);
+
+	for (; *strv != NULL; strv++) {
+		if (g_str_equal(str, *strv)) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+

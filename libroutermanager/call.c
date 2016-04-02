@@ -135,6 +135,7 @@ GSList *call_add(GSList *journal, gint type, const gchar *date_time, const gchar
 	call->type = type;
 	call->date_time = date_time ? g_strdup(date_time) : g_strdup("");
 	call->remote = g_slice_new0(struct contact);
+	call->remote->image = NULL;
 	call->remote->name = remote_name ? g_convert_utf8(remote_name, -1) : g_strdup("");
 	call->remote->number = remote_number ? g_strdup(remote_number) : g_strdup("");
 	call->local = g_slice_new0(struct contact);
@@ -184,16 +185,15 @@ void call_free(gpointer data)
  * call_scramble_number:
  * \brief Scramble number so we can print it to log files
  * \param number input number
- * Returns: (transfer none) scrambled number
+ * Returns: scrambled number
  */
 gchar *call_scramble_number(const gchar *number)
 {
-	static gchar scramble[255];
+	gchar *scramble;
 	gint len;
 
-	memset(scramble, 0, sizeof(scramble));
-	strncpy(scramble, number, sizeof(scramble));
-	len = strlen(scramble);
+	len = strlen(number);
+	scramble = g_strdup(number);
 
 	if (len > 2) {
 		gint index;

@@ -73,11 +73,7 @@ static void notify_accept_clicked_cb(NotifyNotification *notify, gchar *action, 
 	notify_notification_close(connection->notification, NULL);
 	connection->notification = NULL;
 
-	app_show_phone_window(contact);
-
-	phone_pickup(connection->priv ? connection->priv : active_capi_connection);
-
-	phone_add_connection(connection->priv ? connection->priv : active_capi_connection);
+	app_show_phone_window(contact, connection);
 }
 
 /**
@@ -259,9 +255,13 @@ void notifications_connection_notify_cb(AppObject *obj, struct connection *conne
 	}
 
 	if (connection->type == CONNECTION_TYPE_INCOMING) {
-		notify = notify_notification_new(_("Incoming call"), text, "notification-message-roger-in.svg");
+		gchar *title = g_strdup_printf(_("Incoming call (on %s)"), connection->local_number);
+
+		notify = notify_notification_new(title, text, "notification-message-roger-in.svg");
 		notify_notification_add_action(notify, "accept", _("Accept"), notify_accept_clicked_cb, connection, NULL);
 		notify_notification_add_action(notify, "deny", _("Decline"), notify_deny_clicked_cb, connection, NULL);
+
+		g_free(title);
 	} else if (connection->type == CONNECTION_TYPE_OUTGOING) {
 		gint duration = g_settings_get_int(notification_settings, "duration");
 
