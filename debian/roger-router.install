@@ -5,5 +5,5 @@ usr/share/glib-2.0/schemas
 usr/share/roger/*.png
 usr/share/appdata/roger.appdata.xml
 usr/share/icons/hicolor/scalable/apps/roger.svg
-usr/share/applications/roger.desktop
+usr/share/applications/org.tabos.roger.desktop
 usr/share/locale
