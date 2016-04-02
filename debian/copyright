@@ -7,14 +7,6 @@ Files: *
 Copyright: Copyright © 2008-2014 Jan-Michael Brummer
            Copyright © 2010-2012 Louis Lagendijk
 License: GPL-2
-Comment: Some files are missing an explicit copyright declaration
- The packager verified that these were written by upstream who simply
- forgot to include their own copyright stanza in these files. Thus,
- they fall under this license paragraph and are released as GPL-2.
- .
- roger/plugins/keychain/keychain.c
- roger/plugins/kwallet/kwallet.cpp
- roger/plugins/kwallet/kwallet_wrapper.cpp
 
 Files: roger/plugins/vcard/vcard.h libroutermanager/*
 Copyright: Copyright © 2012-2014 Jan-Michael Brummer
