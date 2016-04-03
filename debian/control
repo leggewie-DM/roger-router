@@ -22,7 +22,7 @@ Build-Depends: debhelper (>= 9), dh-autoreconf,
  libxml2-dev,
  libtool,
  intltool
-Standards-Version: 3.9.5
+Standards-Version: 3.9.7
 Homepage: http://www.tabos.org/roger
 Vcs-git: git://git.debian.org/git/collab-maint/roger-router.git
 Vcs-Browser: http://git.debian.org/?p=collab-maint/roger-router.git
