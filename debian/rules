@@ -10,15 +10,11 @@ override_dh_autoreconf:
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		--with-spandsp=6 \
-		--with-libnotify=yes \
 		--with-secret=yes \
-		--with-ebook=yes \
-		--with-gstreamer1=yes \
-		--with-pulseaudio=yes \
-		--with-portaudio=no \
-		--with-faxophone=yes \
-		--with-appindicator3=yes
+		--with-macos-keychain=no \
+		--with-gstreamer1=check \
+		--with-pulseaudio=check \
+		--with-portaudio=check
 
 override_dh_install:
 
