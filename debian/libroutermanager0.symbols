@@ -10,6 +10,7 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  action_remove@Base 1.8.4
  action_shutdown@Base 1.8.4
  active_capi_connection@Base 1.8.4
+ address_book_available@Base 1.8.14
  address_book_can_save@Base 1.8.4
  address_book_contact_process_cb@Base 1.8.7
  address_book_get_contacts@Base 1.8.4
@@ -56,6 +57,7 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  connection_terminated@Base 1.8.4
  contact_copy@Base 1.8.4
  contact_dup@Base 1.8.4
+ contact_find_by_number@Base 1.8.14
  contact_name_compare@Base 1.8.4
  convert_audio_to_isdn@Base 1.8.4
  convert_isdn_to_audio@Base 1.8.4
@@ -64,11 +66,13 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  csv_parse_data@Base 1.8.4
  csv_parse_journal_data@Base 1.8.4
  csv_save_journal@Base 1.8.4
+ csv_save_journal_as@Base 1.8.14
  emit_connection_established@Base 1.8.4
  emit_connection_notify@Base 1.8.4
  emit_connection_status@Base 1.8.4
  emit_connection_terminated@Base 1.8.4
  emit_contact_process@Base 1.8.4
+ emit_contacts_changed@Base 1.8.14
  emit_fax_process@Base 1.8.4
  emit_journal_loaded@Base 1.8.4
  emit_message@Base 1.8.7
@@ -81,7 +85,6 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  fax_send@Base 1.8.4
  fax_set_log_level@Base 1.8.4
  fax_spandsp_workaround@Base 1.8.4
-#MISSING: 1.8.9-2# fax_spooler_new_dir_cb@Base 1.8.4
  fax_transfer@Base 1.8.4
  faxophone_close@Base 1.8.4
  faxophone_connect@Base 1.8.4
@@ -113,14 +116,12 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  ftp_read_data_response@Base 1.8.4
  ftp_send_command@Base 1.8.4
  ftp_shutdown@Base 1.8.4
-#MISSING: 1.8.7# ftp_timeout_cb@Base 1.8.4
  fx_generate@Base 1.8.4
  g_convert_utf8@Base 1.8.4
  g_strcasestr@Base 1.8.4
  get_directory@Base 1.8.4
  get_line_level_in@Base 1.8.4
  get_line_level_out@Base 1.8.4
-#MISSING: 1.8.9# get_plugin_dir@Base 1.8.4
  has_file_extension@Base 1.8.4
  init_directory_paths@Base 1.8.4
  law_2_linear16@Base 1.8.4
@@ -145,7 +146,6 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  password_manager_find@Base 1.8.7
  password_manager_get_password@Base 1.8.4
  password_manager_get_plugins@Base 1.8.7
- password_manager_init@Base 1.8.7
  password_manager_register@Base 1.8.4
  password_manager_remove_password@Base 1.8.4
  password_manager_set_password@Base 1.8.4
@@ -181,15 +181,12 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  recording_init@Base 1.8.4
  recording_open@Base 1.8.4
  recording_write@Base 1.8.4
-#MISSING: 1.8.9# remote_call_handle@Base 1.8.4
-#MISSING: 1.8.9# remote_port_get_main@Base 1.8.4
-#MISSING: 1.8.9# remote_port_init@Base 1.8.4
-#MISSING: 1.8.9# remote_port_init_call@Base 1.8.4
-#MISSING: 1.8.9# remote_port_invoke_call@Base 1.8.4
-#MISSING: 1.8.9# remote_port_register_call@Base 1.8.4
  ringtone_play@Base 1.8.4
  ringtone_stop@Base 1.8.4
  rm_print_error_quark@Base 1.8.4
+ rm_settings_new@Base 1.8.14
+ rm_settings_new_with_path@Base 1.8.14
+ rm_settings_plugin_new@Base 1.8.14
  router_clear_journal@Base 1.8.4
  router_delete_fax@Base 1.8.4
  router_delete_voice@Base 1.8.4
@@ -208,7 +205,9 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  router_get_national_prefix@Base 1.8.4
  router_get_numbers@Base 1.8.4
  router_get_phone_list@Base 1.8.4
+ router_get_phone_port@Base 1.8.14
  router_get_settings@Base 1.8.4
+ router_get_suppress_state@Base 1.8.14
  router_get_version@Base 1.8.4
  router_hangup@Base 1.8.4
  router_info_free@Base 1.8.4
@@ -218,12 +217,14 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  router_load_fax_reports@Base 1.8.9
  router_load_journal@Base 1.8.4
  router_load_voice@Base 1.8.4
+ router_load_voice_records@Base 1.8.14
  router_login@Base 1.8.4
  router_logout@Base 1.8.4
  router_phone_ports@Base 1.8.4
  router_present@Base 1.8.4
  router_process_journal@Base 1.8.4
  router_reconnect@Base 1.8.4
+ router_set_phone_port@Base 1.8.14
  router_shutdown@Base 1.8.4
  routermanager_address_book_register@Base 1.8.4
  routermanager_audio_register@Base 1.8.4
@@ -238,16 +239,14 @@ libroutermanager.so.0 libroutermanager0 #MINVER#
  sff_init_data@Base 1.8.4
  sff_send@Base 1.8.4
  sff_transfer_thread@Base 1.8.4
- simple@Base 1.8.7
- simple_get_password@Base 1.8.7
- simple_remove_password@Base 1.8.7
- simple_store_password@Base 1.8.7
  soup_session_async@Base 1.8.4
  soup_session_sync@Base 1.8.4
  spandsp_close@Base 1.8.4
  spandsp_init@Base 1.8.4
  spandsp_rx@Base 1.8.4
  spandsp_tx@Base 1.8.4
+ ssdp_get_routers@Base 1.8.14
+ ssdp_init@Base 1.8.14
  strip_html@Base 1.8.4
  vox_get_fraction@Base 1.8.9
  vox_init@Base 1.8.9
