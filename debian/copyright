@@ -9,7 +9,7 @@ Copyright: Copyright © 2008-2014 Jan-Michael Brummer
 License: GPL-2
 
 Files: roger/plugins/vcard/vcard.h libroutermanager/*
-Copyright: Copyright © 2012-2014 Jan-Michael Brummer
+Copyright: Copyright © 2012-2015 Jan-Michael Brummer
 License: LGPL-2.1+
 
 Files: libroutermanager/plugins/portaudio/portaudio.c
@@ -21,11 +21,11 @@ Copyright: Copyright © 2004-2006 Ghostgum Software Pty Ltd
 License: Expat/Ghostgum
 
 Files: */Makefile.in
-Copyright: Copyright © 1994-2013 Free Software Foundation, Inc.
+Copyright: Copyright © 1994-2014 Free Software Foundation, Inc.
 License: MIT/FSF
 
 Files: debian/*
-Copyright: Copyright © 2009-2014 Rolf Leggewie <foss@rolf.leggewie.biz>
+Copyright: Copyright © 2009-2016 Rolf Leggewie <foss@rolf.leggewie.biz>
            Copyright © 2014      Philipp Hahn <pmhahn@debian.org>
 License: GPL-2
 
