@@ -5,78 +5,79 @@ Based on work by Philipp Matthias Hahn
 
 --- a/doc/roger.1.in
 +++ b/doc/roger.1.in
-@@ -6,8 +6,7 @@
- .B roger
+@@ -8,7 +8,7 @@ roger \- this is the graphical user interface of Roger Router.
+ .B roger [OPTIONS...]
  
  .SH DESCRIPTION
--.PP
--\fBRoger Router\fP is a clean solution for controlling the FRITZ!Box or compatible
-+\fBroger\fP is a clean solution for controlling the FRITZ!Box or compatible
- router with Linux. It offers a rich feature list, including caller monitor,
- fax and softphone support.
+-\fBRoger Router\fR is a clean solution for controlling the FRITZ!Box or compatible router with Linux. It offers a rich feature list, including caller monitor, fax and softphone support.
++\fBroger\fR offers a clean solution for controlling the FRITZ!Box or compatible router with Linux. It offers a rich feature list, including caller monitor, fax and softphone support.
  
+ .SH OPTIONS
+ .TP
 --- a/doc/roger_cli.1.in
 +++ b/doc/roger_cli.1.in
-@@ -1,32 +1,40 @@
+@@ -1,4 +1,4 @@
 -.\" Copyright (c) 2009-2014, Jan-Michael Brummer <jan.brummer@tabos.org>
 +.\" Copyright (c) 2009-2014,\ Jan-Michael Brummer <jan.brummer@tabos.org>
- .TH roger_cli 1 "" "Roger Router CLI Version @PACKAGE_VERSION@"
+ .TH roger_cli 1 "" "Roger Router CLI \- Version @PACKAGE_VERSION@" "Roger Router CLI - User Manual"
+ 
  .SH NAME
--roger \- Command Line Router Manager
-+roger_cli \- Command Line Router Manager
- .SH SYNOPSIS
- .B roger_cli
+@@ -8,35 +8,37 @@ roger_cli \- this is the command line interface of Roger Router.
+ .B roger_cli [OPTION...]
  
  .SH DESCRIPTION
--\fBroger_cli\fP can print the current FRITZ!Box journal to the screen and send fax files.
-+\fBroger_cli\fP is the Roger Router command line client for managing the FRITZ!Box.
-+It can be used to print the current FRITZ!Box journal to the screen,\ initiate calls or send facsimiles.
+-\fBRoger Router\fR is a clean solution for controlling the FRITZ!Box or compatible router with Linux. It offers a rich feature list, including caller monitor, fax and softphone support.
++\fBroger_cli\fR offers a clean solution for controlling the FRITZ!Box or compatible router from the command line with Linux. It can be used to print the current FRITZ!Box journal to the screen,\ initiate calls or send facsimiles.
  
  .SH OPTIONS
 +The program follows the usual GNU command line syntax,\ with long options starting with two dashes (`-').
 +A summary of options is included below.
++.TP
++\fB\-h\fR, \fB\-\-help\fR
++Show help options.
  .TP
--.BR \-c
--Call a number with the softphone. Needs target number, see -n.
-+.B \-h,\ \-\-help
-+Show summary of options.
+ \fB\-c\fR, \fB\-\-call\fR
+ Initiate an outgoing call by softphone. Requires \fB\-n\fR \fInumber\fR to be given as well.
  .TP
--.BR \-s
--Send fax file. Needs fax file name (PS/PDF) -f and target number -n.
-+.B \-d,\ \-\-debug
+-\fB\-d\fR, \fB\-\-debug\fR
+-Enable debug messages.
+-.TP
+-\fB\-f\fR \fIfile\fR, \fB\-\-file\fR=\fIfile\fR
+-File name of a PDF or PostScript \fIfile\fR containing the fax to send.
+-.TP
+-\fB\-h\fR, \fB\-\-help\fR
+-Show help options.
++\fB\-s\fR, \fB\-\-sendfax\fR
++Initiate sending of a fax. Requires \fB\-f\fR \fIfile\fR (in PS or PDF format) and \fB\-n\fR \fInumber\fR to be given as well.
+ .TP
+ \fB\-j\fR, \fB\-\-journal\fR
+ Show journal of incoming and outgoing calls on the screen.
+ .TP
+-\fB\-s\fR, \fB\-\-sendfax\fR
+-Initiate sending of a fax. Requires \fB\-f\fR \fIfile\fR and \fB\-n\fR \fInumber\fR to be given as well.
++\fB\-d\fR, \fB\-\-debug\fR
 +Enable debug messages.
  .TP
--.BR \-d
--Enable debug output.
-+.B \-j,\ \-\-journal
-+Prints journal of incoming and outgoing calls.
- .TP
--.BR \-j
--Show journal.
-+.B \-s,\ \-\-sendfax
-+Initiate sending of a facsimile.
-+Requires \-f \fIfile\fP (in PS or PF format) and \-n \fInumber\fP to be given as well.
- .TP
--.BR \-f
--File name of fax to transfer.
-+.B \-c,\ \-\-call
-+Initiate an outgoing call by softphone.
-+Requires \-n \fInumber\fP to be given as well.
- .TP
--.BR \-n
--Target number.
-+.B \-f \fIfile\fP,\ \-\-file=\fIfile\fP
-+File name of a PDF or PostScript \fIfile\fP containing the facsimile to send.
+ \fB\-n\fR \fInumber\fR, \fB\-\-number\fR=\fInumber\fR
+ Remote telephone or fax \fInumber\fR.
 +.TP
-+.B \-n \fInumber\fP,\ \-\-number=\fInumber\fP
-+Remote telephone or facsimile \fInumber\fP.
++\fB\-f\fR \fIfile\fR, \fB\-\-file\fR=\fIfile\fR
++File name of a PDF or PostScript \fIfile\fR containing the fax to send.
  
- .SH SEE ALSO
- \fIhttp://www.tabos.org/roger/\fP
-@@ -40,4 +48,4 @@
-  Jan-Michael Brummer (developer)
- .br
- 
--This manpage was written by Jan-Michael Brummer <\fIjan.brummer@tabos.org\fP>.
-\ No newline at end of file
-+This manpage was written by Jan-Michael Brummer <\fIjan.brummer@tabos.org\fP> with additions by Philipp Matthias Hahn <\fIpmhahn@debian.org\fP> and Rolf Leggewie <\fIfoss@rolf.leggewie.biz\fP>.
+ .SH NOTES
+ .IP "\fIFaxing\fR" 4
+ .RS
+-If you want to use the capi fax function into Roger Router, you must enable capi-over-tcp within your FRITZ!Box with #96*3* and the user must be a member of the group fax.
++If you want to use the capi fax function with Roger Router, you must enable capi-over-tcp within your FRITZ!Box with #96*3* and the user must be a member of the group fax.
+ .RE
+ .IP "\fINotifications\fR" 4
+ .RS
+@@ -69,4 +71,8 @@ Jan-Michael Brummer (developer)  <\fIjan.brummer@tabos.org\fR>
+ .IP "This manpage was written by:" 4
+ .RS
+ Jan-Michael Brummer <\fIjan.brummer@tabos.org\fR>
++.br
++Philipp Matthias Hahn <\fIpmhahn@debian.org\fR>
++.br
++Rolf Leggewie <\fIfoss@rolf.leggewie.biz\fR>
+ .RE
