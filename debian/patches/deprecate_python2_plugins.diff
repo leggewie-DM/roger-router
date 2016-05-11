@@ -1,0 +1,15 @@
+diff --git a/libroutermanager/plugins.c b/libroutermanager/plugins.c
+index abe364c..506d1c7 100644
+--- a/libroutermanager/plugins.c
++++ b/libroutermanager/plugins.c
+@@ -97,8 +97,8 @@ void plugins_init(void)
+ 		peas_engine_add_search_path(engine, plugin_dir, plugin_dir);
+ 	}
+ 
+-	/* In addition to C we want to support python plugins */
+-	peas_engine_enable_loader(engine, "python");
++	/* In addition to C we want to support python3 plugins */
++	peas_engine_enable_loader(engine, "python3");
+ 
+ 	/* Traverse through detected plugins and loaded builtin plugins now */
+ 	for (list = peas_engine_get_plugin_list(engine); list != NULL; list = list->next) {

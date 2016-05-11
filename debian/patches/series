@@ -1,3 +1,4 @@
+deprecate_python2_plugins.diff
 fix-manpages.diff
 fix-cups-quoting.diff
 enable-maintainer-mode.diff
