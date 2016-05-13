@@ -1,3 +1,9 @@
+roger-router (1.8.14-2) unstable; urgency=medium
+
+  * require python plugins to be python3 from now on. Closes: #817936
+
+ -- Rolf Leggewie <foss@rolf.leggewie.biz>  Sat, 14 May 2016 06:22:36 +0800
+
 roger-router (1.8.14-1) unstable; urgency=medium
 
   * new upstream release, LP: #1553567
